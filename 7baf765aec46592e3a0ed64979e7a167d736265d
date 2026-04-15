@@ -1,0 +1,41 @@
+app/components/ui/badge.tsx
+  c63bc5ea6e79531c 1-49
+app/components/ui/sonner.tsx
+  c63bc5ea6e79531c 1-47
+app/components/ui/tabs.tsx
+  c63bc5ea6e79531c 1-90
+app/components/ui/card.tsx
+  c63bc5ea6e79531c 1-103
+app/components/ui/table.tsx
+  c63bc5ea6e79531c 1-116
+app/components/ui/dialog.tsx
+  c63bc5ea6e79531c 1-168
+app/components/ui/input.tsx
+  c63bc5ea6e79531c 1-19
+app/components/ui/label.tsx
+  c63bc5ea6e79531c 1-22
+app/components/ui/checkbox.tsx
+  c63bc5ea6e79531c 1-31
+package.json
+  c63bc5ea6e79531c 19,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "7baf765aec46592e3a0ed64979e7a167d736265d",
+  "prompts": {
+    "c63bc5ea6e79531c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d72022b-8bd6-42f0-b7c4-9c1bc0cf7f30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 647,
+      "total_deletions": 0,
+      "accepted_lines": 647,
+      "overriden_lines": 0
+    }
+  }
+}
