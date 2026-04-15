@@ -1,0 +1,25 @@
+app/lib/month-utils.ts
+  c63bc5ea6e79531c 1-39
+tests/month-utils.test.ts
+  c63bc5ea6e79531c 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "45fc2116e78b039e5c19cff3703d1b0120f029ed",
+  "prompts": {
+    "c63bc5ea6e79531c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d72022b-8bd6-42f0-b7c4-9c1bc0cf7f30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 68,
+      "total_deletions": 0,
+      "accepted_lines": 68,
+      "overriden_lines": 0
+    }
+  }
+}
