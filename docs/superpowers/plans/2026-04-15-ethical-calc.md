@@ -123,83 +123,88 @@ git commit -m "chore: scaffold react-router v7 project"
 
 ---
 
-## Task 2: Add Tailwind CSS and shadcn/ui
+## Task 2: Add shadcn/ui (Tailwind v4 already set up)
+
+**Context:** The RR v7 scaffold already installed Tailwind v4 via `@tailwindcss/vite`
+and configured `app/app.css` with `@import "tailwindcss"`. The index route file
+is `app/routes/home.tsx` (not `_index.tsx`) per current RR v7 convention.
 
 **Files:**
-- Create: `tailwind.config.ts`, `postcss.config.js`, `app/tailwind.css`, `components.json`
-- Modify: `app/root.tsx`, `vite.config.ts`
+- Create: `components.json`, `app/lib/utils.ts`, shadcn component files under `app/components/ui/`
+- Modify: `app/routes/home.tsx`, `tsconfig.json` (if aliases missing)
 
-- [ ] **Step 1: Install Tailwind v3**
+- [ ] **Step 1: Verify Tailwind is working**
 
-```bash
-npm install -D tailwindcss@^3 postcss autoprefixer
-npx tailwindcss init -p
-```
-
-- [ ] **Step 2: Configure Tailwind**
-
-Replace `tailwind.config.ts` with:
-```ts
-import type { Config } from "tailwindcss";
-
-export default {
-  content: ["./app/**/*.{ts,tsx}"],
-  theme: { extend: {} },
-  plugins: [],
-} satisfies Config;
-```
-
-Create `app/tailwind.css`:
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
-
-- [ ] **Step 3: Wire CSS into root**
-
-In `app/root.tsx`, import the stylesheet link:
+Edit `app/routes/home.tsx` — replace contents with:
 ```tsx
-import type { LinksFunction } from "react-router";
-import stylesheet from "./tailwind.css?url";
+export function meta() {
+  return [{ title: "Ethical Calc" }];
+}
 
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: stylesheet },
-];
-```
-
-- [ ] **Step 4: Verify Tailwind works**
-
-In `app/routes/_index.tsx`:
-```tsx
-export default function Index() {
+export default function Home() {
   return <h1 className="text-3xl font-bold text-blue-600">Ethical Calc</h1>;
 }
 ```
 
-Run `npm run dev`. Confirm large blue bold heading. Stop server.
+Run `npm run dev &`, curl `http://localhost:5173`, confirm the HTML contains
+`text-3xl font-bold text-blue-600`. Kill the server.
 
-- [ ] **Step 5: Init shadcn/ui**
-
-```bash
-npx shadcn@latest init -y -d
-```
-
-Accept defaults: TypeScript, Slate base color, CSS variables.
-
-If prompts differ, choose: TypeScript, default style, Slate, CSS variables yes, alias `~/components`, alias `~/lib/utils`.
-
-- [ ] **Step 6: Install core shadcn components**
+- [ ] **Step 2: Init shadcn/ui**
 
 ```bash
-npx shadcn@latest add button card input label table dialog checkbox badge tabs sonner toast
+npx shadcn@latest init
 ```
 
-- [ ] **Step 7: Commit**
+Answer prompts:
+- base color: Slate
+- Use CSS variables: yes
+
+If `--yes` accepts defaults, prefer that. shadcn should detect Tailwind v4
+and configure appropriately.
+
+- [ ] **Step 3: Verify `~/` alias works**
+
+Confirm `tsconfig.json` has `"paths": { "~/*": ["./app/*"] }`. If not,
+add it. Confirm `app/lib/utils.ts` was created by shadcn (contains the `cn`
+helper).
+
+- [ ] **Step 4: Install core shadcn components**
+
+```bash
+npx shadcn@latest add button card input label table dialog checkbox badge tabs sonner
+```
+
+If any component fails, install them individually. shadcn v4 may have
+renamed `toast` → `sonner` (already in list).
+
+- [ ] **Step 5: Smoke test a shadcn component**
+
+Edit `app/routes/home.tsx`:
+```tsx
+import { Button } from "~/components/ui/button";
+
+export function meta() {
+  return [{ title: "Ethical Calc" }];
+}
+
+export default function Home() {
+  return (
+    <main className="p-8">
+      <h1 className="text-3xl font-bold">Ethical Calc</h1>
+      <Button className="mt-4">Test button</Button>
+    </main>
+  );
+}
+```
+
+Run `npm run dev &`, curl the page, confirm the button renders with shadcn
+classes. Kill server.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add -A
-git commit -m "chore: add tailwind and shadcn/ui"
+git commit -m "chore: add shadcn/ui"
 ```
 
 ---
@@ -3117,6 +3122,143 @@ See [docs/superpowers/specs/2026-04-15-ethical-calc-design.md](docs/superpowers/
 ```bash
 git add -A
 git commit -m "docs: deployment and README"
+```
+
+---
+
+## Task 25b: Taskfile for useful commands
+
+**Files:**
+- Create: `Taskfile.yml`
+- Modify: `README.md`
+
+Use [Taskfile.dev](https://taskfile.dev) to wrap useful commands. User may
+install via `sudo snap install task --classic` or system package manager.
+
+- [ ] **Step 1: Create `Taskfile.yml`**
+
+At project root:
+```yaml
+version: "3"
+
+tasks:
+  default:
+    desc: "List available tasks"
+    cmds:
+      - task --list
+
+  dev:
+    desc: "Run dev server (Vite HMR on port 5173)"
+    cmds:
+      - npm run dev
+
+  build:
+    desc: "Build for production"
+    cmds:
+      - npm run build
+
+  start:
+    desc: "Run production server"
+    cmds:
+      - npm start
+
+  test:
+    desc: "Run unit + integration tests once"
+    cmds:
+      - npm test
+
+  test:watch:
+    desc: "Run tests in watch mode"
+    cmds:
+      - npm run test:watch
+
+  typecheck:
+    desc: "Type-check the project"
+    cmds:
+      - npm run typecheck
+
+  db:migrate:
+    desc: "Apply pending Drizzle migrations"
+    cmds:
+      - npm run db:migrate
+
+  db:generate:
+    desc: "Generate a migration from schema changes"
+    cmds:
+      - npm run db:generate
+
+  db:seed:
+    desc: "Seed default expense categories (idempotent)"
+    cmds:
+      - npm run db:seed
+
+  db:studio:
+    desc: "Open Drizzle Studio (interactive DB browser)"
+    cmds:
+      - npm run db:studio
+
+  db:reset:
+    desc: "WARNING: delete the SQLite DB and re-run migrations + seed"
+    prompt: "This will DELETE data/household.db. Continue?"
+    cmds:
+      - rm -f data/household.db
+      - npm run db:migrate
+      - npm run db:seed
+
+  set-password:
+    desc: "Set the household password (writes to .env)"
+    cmds:
+      - npm run set-password -- {{.CLI_ARGS}}
+
+  install:
+    desc: "Install dependencies"
+    cmds:
+      - npm ci
+
+  clean:
+    desc: "Remove build artifacts and node_modules"
+    prompt: "Remove build/ and node_modules/?"
+    cmds:
+      - rm -rf build node_modules
+
+  check:
+    desc: "Run typecheck + tests (CI-equivalent)"
+    cmds:
+      - task: typecheck
+      - task: test
+```
+
+- [ ] **Step 2: Add install + usage note to README**
+
+In `README.md`, add under a new `## Task runner` heading:
+
+```markdown
+## Task runner
+
+Common commands are wrapped in a Taskfile. Install [Task](https://taskfile.dev)
+(e.g. `sudo snap install task --classic` or see the Taskfile docs) then run:
+
+```bash
+task              # list tasks
+task dev          # start dev server
+task test         # run tests
+task db:migrate   # apply Drizzle migrations
+task set-password -- "<password>"
+```
+```
+
+- [ ] **Step 3: Smoke test**
+
+```bash
+task --list
+```
+Expected: every task from Taskfile.yml is listed with its `desc`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "chore: add Taskfile for common commands"
 ```
 
 ---
