@@ -5,3 +5,7 @@
 # React Router
 /.react-router/
 /build/
+
+# SQLite database (runtime only)
+/data/*
+!/data/.gitkeep
