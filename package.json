@@ -12,12 +12,14 @@
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:seed": "tsx scripts/seed-defaults.ts"
+    "db:seed": "tsx scripts/seed-defaults.ts",
+    "set-password": "tsx scripts/set-password.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
     "@react-router/node": "7.14.0",
     "@react-router/serve": "7.14.0",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -37,6 +39,7 @@
   "devDependencies": {
     "@react-router/dev": "7.14.0",
     "@tailwindcss/vite": "^4.2.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22",
     "@types/react": "^19.2.14",
