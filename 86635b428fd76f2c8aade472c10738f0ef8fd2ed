@@ -1,0 +1,35 @@
+components.json
+  c63bc5ea6e79531c 1-25
+package.json
+  c63bc5ea6e79531c 12,15-16,18-19,22-25,37
+app/routes/home.tsx
+  c63bc5ea6e79531c 1-4,6
+app/app.css
+  c63bc5ea6e79531c 2-4,6,21-97,99-144
+app/components/ui/button.tsx
+  c63bc5ea6e79531c 1-67
+app/lib/utils.ts
+  c63bc5ea6e79531c 1-6
+docs/superpowers/plans/2026-04-15-ethical-calc.md
+  c63bc5ea6e79531c 126,128-130,132-134,136,138-142,144-146,149-150,152,154-155,158-160,162-165,167-169,171,174,177-178,180,182-184,186-197,200-201,203,207,3129-3265
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "86635b428fd76f2c8aade472c10738f0ef8fd2ed",
+  "prompts": {
+    "c63bc5ea6e79531c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d72022b-8bd6-42f0-b7c4-9c1bc0cf7f30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 435,
+      "total_deletions": 54,
+      "accepted_lines": 435,
+      "overriden_lines": 0
+    }
+  }
+}
