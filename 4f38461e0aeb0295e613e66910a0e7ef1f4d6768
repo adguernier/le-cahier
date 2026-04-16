@@ -1,0 +1,35 @@
+app/routes/month-detail.tsx
+  c63bc5ea6e79531c 1-381
+app/routes/settings-categories.tsx
+  c63bc5ea6e79531c 1-138
+app/routes/settings-members.tsx
+  c63bc5ea6e79531c 1-163
+app/routes.ts
+  c63bc5ea6e79531c 7-10
+app/components/month-status-badge.tsx
+  c63bc5ea6e79531c 1-9
+app/routes/months.tsx
+  c63bc5ea6e79531c 1-77
+app/routes/home.tsx
+  c63bc5ea6e79531c 1-23,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "4f38461e0aeb0295e613e66910a0e7ef1f4d6768",
+  "prompts": {
+    "c63bc5ea6e79531c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d72022b-8bd6-42f0-b7c4-9c1bc0cf7f30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 796,
+      "total_deletions": 3,
+      "accepted_lines": 796,
+      "overriden_lines": 0
+    }
+  }
+}
