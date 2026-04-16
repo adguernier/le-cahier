@@ -1,0 +1,29 @@
+app/lib/env.server.ts
+  c63bc5ea6e79531c 1-2
+app/lib/db.server.ts
+  c63bc5ea6e79531c 1
+app/lib/auth.server.ts
+  c63bc5ea6e79531c 1
+package.json
+  c63bc5ea6e79531c 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "9a2ec184fbf9029bd1734426813f5db31346a364",
+  "prompts": {
+    "c63bc5ea6e79531c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d72022b-8bd6-42f0-b7c4-9c1bc0cf7f30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    }
+  }
+}
