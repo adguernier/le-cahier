@@ -1,0 +1,87 @@
+version: "3"
+
+tasks:
+  default:
+    desc: "List available tasks"
+    cmds:
+      - task --list
+
+  dev:
+    desc: "Run dev server (Vite HMR on port 5173)"
+    cmds:
+      - npm run dev
+
+  build:
+    desc: "Build for production"
+    cmds:
+      - npm run build
+
+  start:
+    desc: "Run production server"
+    cmds:
+      - npm start
+
+  test:
+    desc: "Run unit + integration tests once"
+    cmds:
+      - npm test
+
+  test:watch:
+    desc: "Run tests in watch mode"
+    cmds:
+      - npm run test:watch
+
+  typecheck:
+    desc: "Type-check the project"
+    cmds:
+      - npm run typecheck
+
+  db:migrate:
+    desc: "Apply pending Drizzle migrations"
+    cmds:
+      - npm run db:migrate
+
+  db:generate:
+    desc: "Generate a migration from schema changes"
+    cmds:
+      - npm run db:generate
+
+  db:seed:
+    desc: "Seed default expense categories (idempotent)"
+    cmds:
+      - npm run db:seed
+
+  db:studio:
+    desc: "Open Drizzle Studio (interactive DB browser)"
+    cmds:
+      - npm run db:studio
+
+  db:reset:
+    desc: "WARNING: delete the SQLite DB and re-run migrations + seed"
+    prompt: "This will DELETE data/household.db. Continue?"
+    cmds:
+      - rm -f data/household.db
+      - npm run db:migrate
+      - npm run db:seed
+
+  set-password:
+    desc: "Set the household password (writes to .env)"
+    cmds:
+      - npm run set-password -- {{.CLI_ARGS}}
+
+  install:
+    desc: "Install dependencies"
+    cmds:
+      - npm ci
+
+  clean:
+    desc: "Remove build artifacts and node_modules"
+    prompt: "Remove build/ and node_modules/?"
+    cmds:
+      - rm -rf build node_modules
+
+  check:
+    desc: "Run typecheck + tests (CI-equivalent)"
+    cmds:
+      - task: typecheck
+      - task: test

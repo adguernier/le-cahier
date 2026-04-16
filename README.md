@@ -22,6 +22,19 @@ Ouvrir http://localhost:5173.
 
 Voir [docs/deployment.md](docs/deployment.md).
 
+## Task runner
+
+Les commandes courantes sont dans un `Taskfile.yml`. Installer
+[Task](https://taskfile.dev) (ex: `sudo snap install task --classic`), puis :
+
+```bash
+task              # lister les tâches
+task dev          # démarrer le serveur de dev
+task test         # lancer les tests
+task db:migrate   # appliquer les migrations Drizzle
+task set-password -- "<password>"
+```
+
 ## Spec
 
 Voir [docs/superpowers/specs/2026-04-15-ethical-calc-design.md](docs/superpowers/specs/2026-04-15-ethical-calc-design.md).
