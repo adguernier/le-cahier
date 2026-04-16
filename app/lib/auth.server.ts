@@ -1,3 +1,4 @@
+import "~/lib/env.server";
 import bcrypt from "bcryptjs";
 
 const WINDOW_MS = 15 * 60 * 1000;
