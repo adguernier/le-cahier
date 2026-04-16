@@ -1,0 +1,25 @@
+README.md
+  c63bc5ea6e79531c 25-37
+Taskfile.yml
+  c63bc5ea6e79531c 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "d667a3111f1a710faa8a4005b04b94ca04338a07",
+  "prompts": {
+    "c63bc5ea6e79531c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d72022b-8bd6-42f0-b7c4-9c1bc0cf7f30",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 100,
+      "total_deletions": 0,
+      "accepted_lines": 100,
+      "overriden_lines": 0
+    }
+  }
+}
