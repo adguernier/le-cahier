@@ -15,7 +15,9 @@ const envPath = ".env";
 let content = existsSync(envPath) ? readFileSync(envPath, "utf-8") : "";
 
 function upsert(key: string, value: string) {
-  const line = `${key}=${value}`;
+  // Single-quote values containing $ to prevent dotenv variable expansion
+  const quoted = value.includes("$") ? `'${value}'` : value;
+  const line = `${key}=${quoted}`;
   const re = new RegExp(`^${key}=.*$`, "m");
   if (re.test(content)) {
     content = content.replace(re, line);
