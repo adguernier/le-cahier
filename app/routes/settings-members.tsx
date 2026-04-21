@@ -10,22 +10,9 @@ import {
 import { memberSchema } from "~/lib/validation";
 import { formatEuros } from "~/lib/money";
 import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { AppShell } from "~/components/app-shell";
 
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
@@ -70,94 +57,121 @@ export async function action({ request }: Route.ActionArgs) {
 export default function SettingsMembers() {
   const { members } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Membres du foyer</h1>
-      {actionData?.error && (
-        <p className="text-sm text-red-600">{actionData.error}</p>
-      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ajouter un membre</CardTitle>
-        </CardHeader>
-        <CardContent>
+  return (
+    <AppShell>
+      <div className="page space-y-12">
+        <header className="rise">
+          <p className="eyebrow">Réglages</p>
+          <h1 className="mt-2 font-heading text-4xl leading-tight text-ink">
+            Membres du foyer
+          </h1>
+          <p className="mt-3 max-w-[56ch] text-ink-soft">
+            Les adultes qui partagent les charges. Chacun a un reste à vivre
+            par défaut — la somme qu’on lui retire avant de calculer sa part
+            selon la méthode « après reste à vivre ».
+          </p>
+        </header>
+
+        {actionData?.error && (
+          <p className="text-sm text-danger" role="alert">
+            <span aria-hidden className="mr-2">—</span>
+            {actionData.error}
+          </p>
+        )}
+
+        <section aria-labelledby="add-member-title" className="rise rise-1">
+          <h2 id="add-member-title" className="eyebrow mb-3">
+            Ajouter un membre
+          </h2>
           <Form
             method="post"
-            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            className="grid grid-cols-1 items-end gap-5 sm:grid-cols-[1fr_1fr_auto]"
           >
             <input type="hidden" name="intent" value="create" />
-            <div className="flex-1 space-y-1">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="name">Nom</Label>
               <Input id="name" name="name" required />
             </div>
-            <div className="flex-1 space-y-1">
-              <Label htmlFor="defaultCostOfLiving">Reste à vivre (€)</Label>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="defaultCostOfLiving">
+                Reste à vivre par défaut (€)
+              </Label>
               <Input
                 id="defaultCostOfLiving"
                 name="defaultCostOfLiving"
                 required
                 defaultValue="800"
+                inputMode="decimal"
+                className="num"
               />
             </div>
-            <Button type="submit">Ajouter</Button>
+            <Button type="submit" variant="primary">
+              Ajouter
+            </Button>
           </Form>
-        </CardContent>
-      </Card>
+        </section>
 
-      {members.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Membres actifs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Reste à vivre</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell>
-                      <Form method="post" className="flex gap-2">
-                        <input type="hidden" name="intent" value="update" />
-                        <input type="hidden" name="id" value={m.id} />
+        <section aria-labelledby="members-list-title" className="rise rise-2">
+          <h2 id="members-list-title" className="eyebrow mb-3">
+            Membres actifs
+          </h2>
+          {members.length === 0 ? (
+            <p className="text-ink-soft">Aucun membre pour l’instant.</p>
+          ) : (
+            <ul className="divide-y divide-rule border-t border-rule-strong">
+              {members.map((m) => (
+                <li key={m.id} className="py-4">
+                  <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-[1fr_1fr_auto_auto]">
+                    <Form
+                      method="post"
+                      className="contents"
+                      id={`member-${m.id}`}
+                    >
+                      <input type="hidden" name="intent" value="update" />
+                      <input type="hidden" name="id" value={m.id} />
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor={`name-${m.id}`}>Nom</Label>
                         <Input
+                          id={`name-${m.id}`}
                           name="name"
                           defaultValue={m.name}
-                          className="w-32"
                         />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor={`col-${m.id}`}>
+                          Reste à vivre (€)
+                        </Label>
                         <Input
+                          id={`col-${m.id}`}
                           name="defaultCostOfLiving"
                           defaultValue={(m.defaultCostOfLiving / 100).toString()}
-                          className="w-24"
+                          inputMode="decimal"
+                          className="num"
                         />
-                        <Button type="submit" variant="outline" size="sm">
-                          OK
-                        </Button>
-                      </Form>
-                    </TableCell>
-                    <TableCell>{formatEuros(m.defaultCostOfLiving)}</TableCell>
-                    <TableCell className="text-right">
-                      <Form method="post">
-                        <input type="hidden" name="intent" value="archive" />
-                        <input type="hidden" name="id" value={m.id} />
-                        <Button type="submit" variant="destructive" size="sm">
-                          Archiver
-                        </Button>
-                      </Form>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+                      </div>
+                      <Button type="submit" variant="outline" size="sm">
+                        Enregistrer
+                      </Button>
+                    </Form>
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="archive" />
+                      <input type="hidden" name="id" value={m.id} />
+                      <Button type="submit" variant="destructive" size="sm">
+                        Archiver
+                      </Button>
+                    </Form>
+                  </div>
+                  <p className="mt-2 text-xs text-ink-faint">
+                    Soit {formatEuros(m.defaultCostOfLiving)} retirés avant
+                    répartition.
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </AppShell>
   );
 }

@@ -10,22 +10,9 @@ import {
 import { categorySchema } from "~/lib/validation";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { AppShell } from "~/components/app-shell";
 
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
@@ -60,79 +47,91 @@ export async function action({ request }: Route.ActionArgs) {
 export default function SettingsCategories() {
   const { categories } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Catégories</h1>
-      {actionData?.error && (
-        <p className="text-sm text-red-600">{actionData.error}</p>
-      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Ajouter une catégorie</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form method="post" className="flex items-end gap-2">
+  return (
+    <AppShell>
+      <div className="page space-y-12">
+        <header className="rise">
+          <p className="eyebrow">Réglages</p>
+          <h1 className="mt-2 font-heading text-4xl leading-tight text-ink">
+            Catégories de dépenses
+          </h1>
+          <p className="mt-3 max-w-[56ch] text-ink-soft">
+            Les étiquettes qu’on attache aux dépenses — loyer, électricité,
+            courses, et ce que vous voudrez ajouter.
+          </p>
+        </header>
+
+        {actionData?.error && (
+          <p className="text-sm text-danger" role="alert">
+            <span aria-hidden className="mr-2">—</span>
+            {actionData.error}
+          </p>
+        )}
+
+        <section aria-labelledby="add-cat-title" className="rise rise-1">
+          <h2 id="add-cat-title" className="eyebrow mb-3">
+            Ajouter une catégorie
+          </h2>
+          <Form
+            method="post"
+            className="grid grid-cols-1 items-end gap-5 sm:grid-cols-[1fr_auto]"
+          >
             <input type="hidden" name="intent" value="create" />
-            <div className="flex-1 space-y-1">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="name">Nom</Label>
               <Input id="name" name="name" required />
             </div>
-            <Button type="submit">Ajouter</Button>
+            <Button type="submit" variant="primary">
+              Ajouter
+            </Button>
           </Form>
-        </CardContent>
-      </Card>
+        </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Toutes les catégories</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    <Form method="post" className="flex gap-2">
-                      <input type="hidden" name="intent" value="rename" />
+        <section aria-labelledby="cat-list-title" className="rise rise-2">
+          <h2 id="cat-list-title" className="eyebrow mb-3">
+            Toutes les catégories
+          </h2>
+          <ul className="divide-y divide-rule border-t border-rule-strong">
+            {categories.map((c) => (
+              <li
+                key={c.id}
+                className="grid grid-cols-[1fr_auto] items-center gap-x-6 py-4 sm:grid-cols-[1fr_auto_auto_auto]"
+              >
+                <Form
+                  method="post"
+                  className="contents"
+                >
+                  <input type="hidden" name="intent" value="rename" />
+                  <input type="hidden" name="id" value={c.id} />
+                  <Input
+                    name="name"
+                    defaultValue={c.name}
+                    aria-label={`Nom de la catégorie ${c.name}`}
+                  />
+                  <Button type="submit" variant="outline" size="sm">
+                    Renommer
+                  </Button>
+                </Form>
+                <Badge variant={c.isDefault ? "outline" : "ghost"}>
+                  {c.isDefault ? "Par défaut" : "Ajoutée"}
+                </Badge>
+                <div>
+                  {!c.isDefault && (
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="delete" />
                       <input type="hidden" name="id" value={c.id} />
-                      <Input name="name" defaultValue={c.name} className="w-40" />
-                      <Button type="submit" variant="outline" size="sm">
-                        Renommer
+                      <Button type="submit" variant="destructive" size="sm">
+                        Supprimer
                       </Button>
                     </Form>
-                  </TableCell>
-                  <TableCell>
-                    {c.isDefault ? (
-                      <Badge>Par défaut</Badge>
-                    ) : (
-                      <Badge variant="outline">Custom</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {c.isDefault ? null : (
-                      <Form method="post">
-                        <input type="hidden" name="intent" value="delete" />
-                        <input type="hidden" name="id" value={c.id} />
-                        <Button type="submit" variant="destructive" size="sm">
-                          Supprimer
-                        </Button>
-                      </Form>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </AppShell>
   );
 }

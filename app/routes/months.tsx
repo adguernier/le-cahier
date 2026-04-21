@@ -4,16 +4,8 @@ import { requireAuth } from "~/lib/session.server";
 import { getMonthState, listMonths } from "~/lib/queries.server";
 import { formatYyyyMm, monthLabel } from "~/lib/month-utils";
 import { formatEuros } from "~/lib/money";
-import { Badge } from "~/components/ui/badge";
-import { Card, CardContent } from "~/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { AppShell } from "~/components/app-shell";
+import { MonthStatusBadge } from "~/components/month-status-badge";
 
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
@@ -28,50 +20,54 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function MonthsList() {
   const { rows } = useLoaderData<typeof loader>();
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Historique</h1>
-      <Card>
-        <CardContent className="pt-6">
-          {rows.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Aucun mois enregistré.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mois</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Total dépenses</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <Link
-                        className="underline"
-                        to={`/months/${formatYyyyMm(r.year, r.month)}`}
-                      >
-                        {monthLabel(r.year, r.month)}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={r.status === "open" ? "default" : "outline"}
-                      >
-                        {r.status === "open" ? "Ouvert" : "Clos"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatEuros(r.total)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <AppShell>
+      <div className="page">
+        <header className="mb-10">
+          <p className="eyebrow">Historique</p>
+          <h1 className="mt-2 font-heading text-4xl leading-tight">
+            Les mois écoulés
+          </h1>
+        </header>
+
+        {rows.length === 0 ? (
+          <p className="max-w-[48ch] text-ink-soft">
+            Aucun mois enregistré pour l’instant.
+            <br />
+            Ouvrez le mois en cours depuis{" "}
+            <Link to="/" className="text-ink underline underline-offset-4">
+              la page d’accueil
+            </Link>
+            .
+          </p>
+        ) : (
+          <ul className="divide-y divide-rule">
+            {rows.map((r, i) => (
+              <li key={r.id} className={`rise rise-${Math.min(i + 1, 4)}`}>
+                <Link
+                  to={`/months/${formatYyyyMm(r.year, r.month)}`}
+                  className="grid grid-cols-[1fr_auto_auto] items-baseline gap-6 py-5 transition-colors hover:bg-paper-sunken/40"
+                >
+                  <div>
+                    <p className="font-heading text-xl text-ink">
+                      {monthLabel(r.year, r.month)}
+                    </p>
+                    <p className="mt-1 text-sm text-ink-soft">
+                      <MonthStatusBadge status={r.status} />
+                    </p>
+                  </div>
+                  <p className="num text-right text-ink-soft">
+                    <span className="eyebrow mr-3">total</span>
+                    <span className="text-ink">{formatEuros(r.total)}</span>
+                  </p>
+                  <span aria-hidden className="text-ink-faint">→</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </AppShell>
   );
 }
