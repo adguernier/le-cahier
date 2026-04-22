@@ -264,6 +264,26 @@ export function getMonthState(monthId: number): MonthState {
   const m = getMonthById(monthId);
   if (!m) throw new Error("Month not found");
 
+  if (m.status === "open") {
+    const existing = db
+      .select({ memberId: monthlyIncomes.memberId })
+      .from(monthlyIncomes)
+      .where(eq(monthlyIncomes.monthId, monthId))
+      .all();
+    const existingIds = new Set(existing.map((r) => r.memberId));
+    for (const mem of listActiveMembers()) {
+      if (existingIds.has(mem.id)) continue;
+      db.insert(monthlyIncomes)
+        .values({
+          monthId,
+          memberId: mem.id,
+          amount: 0,
+          costOfLiving: mem.defaultCostOfLiving,
+        })
+        .run();
+    }
+  }
+
   const incomeRows = db
     .select({
       memberId: monthlyIncomes.memberId,
