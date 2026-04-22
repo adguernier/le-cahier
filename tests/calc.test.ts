@@ -17,13 +17,17 @@ describe("calc — pure proportional", () => {
     ]);
   });
 
-  test("unaffected member pays nothing", () => {
+  test("individual expense (1 member) does not flow into proportional", () => {
     const input: CalcInput = {
       members: [alice, bob],
       expenses: [{ id: 1, amount: 30000, memberIds: [1] }],
     };
     const r = calculate(input);
     expect(r.proportional).toEqual([
+      { memberId: 1, total: 0 },
+      { memberId: 2, total: 0 },
+    ]);
+    expect(r.individualTotals).toEqual([
       { memberId: 1, total: 30000 },
       { memberId: 2, total: 0 },
     ]);
@@ -107,5 +111,70 @@ describe("calc — after cost-of-living", () => {
     expect(r.afterCostOfLiving.find((s) => s.memberId === 2)!.total).toBe(0);
     const sum = r.afterCostOfLiving.reduce((s, x) => s + x.total, 0);
     expect(sum).toBe(80000);
+  });
+});
+
+describe("calc — individual vs common split", () => {
+  test("mix of common and individual expenses — common-only shares, per-member individuals", () => {
+    const input: CalcInput = {
+      members: [alice, bob],
+      expenses: [
+        { id: 1, amount: 60000, memberIds: [1, 2] }, // common
+        { id: 2, amount: 12000, memberIds: [1] },    // individual (Alice)
+        { id: 3, amount: 9000, memberIds: [2] },     // individual (Bob)
+      ],
+    };
+    const r = calculate(input);
+    expect(r.proportional).toEqual([
+      { memberId: 1, total: 40000 },
+      { memberId: 2, total: 20000 },
+    ]);
+    expect(r.individualTotals).toEqual([
+      { memberId: 1, total: 12000 },
+      { memberId: 2, total: 9000 },
+    ]);
+  });
+
+  test("only individual expenses — all common shares are zero", () => {
+    const input: CalcInput = {
+      members: [alice, bob],
+      expenses: [{ id: 1, amount: 25000, memberIds: [2] }],
+    };
+    const r = calculate(input);
+    expect(r.proportional).toEqual([
+      { memberId: 1, total: 0 },
+      { memberId: 2, total: 0 },
+    ]);
+    expect(r.afterCostOfLiving).toEqual([
+      { memberId: 1, total: 0 },
+      { memberId: 2, total: 0 },
+    ]);
+    expect(r.individualTotals).toEqual([
+      { memberId: 1, total: 0 },
+      { memberId: 2, total: 25000 },
+    ]);
+  });
+
+  test("only common expenses — individualTotals all zero", () => {
+    const input: CalcInput = {
+      members: [alice, bob],
+      expenses: [{ id: 1, amount: 60000, memberIds: [1, 2] }],
+    };
+    const r = calculate(input);
+    expect(r.individualTotals).toEqual([
+      { memberId: 1, total: 0 },
+      { memberId: 2, total: 0 },
+    ]);
+  });
+
+  test("individual expense produces a byExpense entry with full amount for the sole member", () => {
+    const input: CalcInput = {
+      members: [alice, bob],
+      expenses: [{ id: 7, amount: 5000, memberIds: [1] }],
+    };
+    const r = calculate(input);
+    const entry = r.byExpense.find((b) => b.expenseId === 7)!;
+    expect(entry.proportional).toEqual([{ memberId: 1, share: 5000 }]);
+    expect(entry.afterCostOfLiving).toEqual([{ memberId: 1, share: 5000 }]);
   });
 });

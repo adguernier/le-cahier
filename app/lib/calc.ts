@@ -27,6 +27,7 @@ export type ExpenseBreakdown = {
 export type CalcResult = {
   proportional: Share[];
   afterCostOfLiving: Share[];
+  individualTotals: Share[];
   byExpense: ExpenseBreakdown[];
 };
 
@@ -70,12 +71,17 @@ export function calculate(input: CalcInput): CalcResult {
 
   const totalsProp = new Map<number, number>(memberIds.map((id) => [id, 0]));
   const totalsCost = new Map<number, number>(memberIds.map((id) => [id, 0]));
+  const totalsIndividual = new Map<number, number>(
+    memberIds.map((id) => [id, 0])
+  );
   const byExpense: ExpenseBreakdown[] = [];
 
   for (const expense of input.expenses) {
     const affected = expense.memberIds
       .map((id) => memberById.get(id))
       .filter((m): m is CalcMember => m !== undefined);
+
+    const isIndividual = affected.length === 1;
 
     const propWeights = affected.map((m) => ({
       memberId: m.id,
@@ -89,16 +95,22 @@ export function calculate(input: CalcInput): CalcResult {
     }));
     const costSum = costWeights.reduce((s, w) => s + w.weight, 0);
     const costShares =
-      costSum === 0
-        ? // Fallback to proportional when nobody has capacity
-          propShares
-        : computeShares(expense.amount, costWeights);
+      costSum === 0 ? propShares : computeShares(expense.amount, costWeights);
 
     byExpense.push({
       expenseId: expense.id,
       proportional: propShares,
       afterCostOfLiving: costShares,
     });
+
+    if (isIndividual) {
+      const soleId = affected[0].id;
+      totalsIndividual.set(
+        soleId,
+        (totalsIndividual.get(soleId) ?? 0) + expense.amount
+      );
+      continue;
+    }
 
     for (const s of propShares) {
       totalsProp.set(s.memberId, (totalsProp.get(s.memberId) ?? 0) + s.share);
@@ -116,6 +128,10 @@ export function calculate(input: CalcInput): CalcResult {
     afterCostOfLiving: memberIds.map((id) => ({
       memberId: id,
       total: totalsCost.get(id) ?? 0,
+    })),
+    individualTotals: memberIds.map((id) => ({
+      memberId: id,
+      total: totalsIndividual.get(id) ?? 0,
     })),
     byExpense,
   };
