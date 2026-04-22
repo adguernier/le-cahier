@@ -60,7 +60,7 @@ tasks:
     desc: "WARNING: delete the SQLite DB and re-run migrations + seed"
     prompt: "This will DELETE data/household.db. Continue?"
     cmds:
-      - rm -f data/household.db
+      - rm -f data/household.db data/household.db-shm data/household.db-wal
       - npm run db:migrate
       - npm run db:seed
 
