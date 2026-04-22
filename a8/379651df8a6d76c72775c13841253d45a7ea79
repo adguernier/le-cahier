@@ -1,0 +1,23 @@
+app/routes/month-detail.tsx
+  db3f62e9683a191c 1-9,83,95,108,113,118,202,241-244,309,331-417,445-552,643
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "a8379651df8a6d76c72775c13841253d45a7ea79",
+  "prompts": {
+    "db3f62e9683a191c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6d754424-a162-4089-ae6a-aefd7e1ffc12",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 1046,
+      "total_deletions": 133,
+      "accepted_lines": 1042,
+      "overriden_lines": 0
+    }
+  }
+}
