@@ -1,4 +1,12 @@
-import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
+import { useEffect, useRef } from "react";
+import {
+  Form,
+  Link,
+  redirect,
+  useActionData,
+  useFetcher,
+  useLoaderData,
+} from "react-router";
 import type { Route } from "./+types/month-detail";
 import { requireAuth } from "~/lib/session.server";
 import {
@@ -72,7 +80,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     });
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     updateIncome(m.id, memberId, parsed.data);
-    return redirect(`/months/${params.yyyymm}`);
+    return { ok: true };
   }
 
   if (intent === "addExpense") {
@@ -84,7 +92,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     });
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     addExpense(m.id, parsed.data);
-    return redirect(`/months/${params.yyyymm}`);
+    return { ok: true };
   }
 
   if (intent === "updateExpense") {
@@ -97,17 +105,17 @@ export async function action({ request, params }: Route.ActionArgs) {
     });
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     updateExpense(id, parsed.data);
-    return redirect(`/months/${params.yyyymm}`);
+    return { ok: true };
   }
 
   if (intent === "deleteExpense") {
     deleteExpense(Number(formData.get("id")));
-    return redirect(`/months/${params.yyyymm}`);
+    return { ok: true };
   }
 
   if (intent === "closeMonth") {
     closeMonth(m.id);
-    return redirect(`/months/${params.yyyymm}`);
+    return { ok: true };
   }
 
   if (intent === "duplicateMonth") {
@@ -123,7 +131,6 @@ export default function MonthDetail() {
   const { state, members, categories, results } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const navigation = useNavigation();
   const isClosed = state.month.status === "closed";
   const memberById = new Map(members.map((m) => [m.id, m]));
   const memberName = (id: number) =>
@@ -192,32 +199,7 @@ export default function MonthDetail() {
           ) : (
             <ul className="divide-y divide-rule border-t border-rule-strong">
               {state.incomes.map((i) => (
-                <li key={i.memberId} className="py-4">
-                  <Form method="post" className="grid grid-cols-1 items-baseline gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
-                    <input type="hidden" name="intent" value="updateIncome" />
-                    <input type="hidden" name="memberId" value={i.memberId} />
-                    <p className="font-heading text-lg text-ink">{i.name}</p>
-                    <IncomeField
-                      name="amount"
-                      label="Revenu"
-                      defaultValue={i.amount}
-                      disabled={isClosed}
-                    />
-                    <IncomeField
-                      name="costOfLiving"
-                      label="Reste à vivre"
-                      defaultValue={i.costOfLiving}
-                      disabled={isClosed}
-                    />
-                    <div className="pt-2 sm:pt-0">
-                      {!isClosed && (
-                        <Button type="submit" variant="outline" size="sm">
-                          Enregistrer
-                        </Button>
-                      )}
-                    </div>
-                  </Form>
-                </li>
+                <IncomeRow key={i.memberId} income={i} isClosed={isClosed} />
               ))}
             </ul>
           )}
@@ -256,79 +238,10 @@ export default function MonthDetail() {
           </div>
 
           {!isClosed && (
-            <Form
-              method="post"
-              className="mt-8 grid grid-cols-1 gap-5 border-t border-rule pt-6 sm:grid-cols-[10rem_1fr_9rem_auto]"
-              aria-labelledby="add-expense-title"
-            >
-              <p
-                id="add-expense-title"
-                className="eyebrow sm:col-span-4 -mb-2"
-              >
-                Ajouter une dépense
-              </p>
-              <input type="hidden" name="intent" value="addExpense" />
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="categoryId">Catégorie</Label>
-                <select
-                  id="categoryId"
-                  name="categoryId"
-                  required
-                  className="border-0 border-b border-rule bg-transparent py-1.5 text-base text-ink outline-none focus:border-accent focus-visible:outline-none"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="expense-label">Libellé</Label>
-                <Input
-                  id="expense-label"
-                  name="label"
-                  placeholder="Ex : électricité"
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="expense-amount">Montant (€)</Label>
-                <Input
-                  id="expense-amount"
-                  name="amount"
-                  placeholder="0,00"
-                  required
-                  inputMode="decimal"
-                  className="num"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button type="submit" variant="primary" className="w-full sm:w-auto">
-                  Ajouter
-                </Button>
-              </div>
-              <fieldset className="sm:col-span-4">
-                <legend className="eyebrow mb-2">Concernés</legend>
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  {state.incomes.map((i) => (
-                    <label
-                      key={i.memberId}
-                      className="inline-flex items-center gap-2 text-sm text-ink"
-                    >
-                      <input
-                        type="checkbox"
-                        name="memberIds"
-                        value={i.memberId}
-                        defaultChecked
-                        className="size-3.5 accent-ink"
-                      />
-                      {i.name}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            </Form>
+            <AddExpenseForm
+              categories={categories}
+              incomes={state.incomes}
+            />
           )}
         </section>
 
@@ -393,16 +306,7 @@ export default function MonthDetail() {
           </Link>
           {!isClosed ? (
             <div className="flex flex-wrap items-center gap-6">
-              <Form method="post">
-                <input type="hidden" name="intent" value="closeMonth" />
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  disabled={navigation.state === "submitting"}
-                >
-                  Clôturer le mois
-                </Button>
-              </Form>
+              <CloseMonthButton />
               <Form method="post">
                 <input type="hidden" name="intent" value="duplicateMonth" />
                 <Button type="submit" variant="primary">
@@ -421,6 +325,93 @@ export default function MonthDetail() {
         </footer>
       </div>
     </AppShell>
+  );
+}
+
+function CloseMonthButton() {
+  const fetcher = useFetcher<typeof action>();
+  const isSubmitting = fetcher.state !== "idle";
+  return (
+    <fetcher.Form method="post">
+      <input type="hidden" name="intent" value="closeMonth" />
+      <Button type="submit" variant="ghost" disabled={isSubmitting}>
+        {isSubmitting ? "Clôture…" : "Clôturer le mois"}
+      </Button>
+    </fetcher.Form>
+  );
+}
+
+function DeleteExpenseButton({ id }: { id: number }) {
+  const fetcher = useFetcher<typeof action>();
+  const isSubmitting = fetcher.state !== "idle";
+  return (
+    <fetcher.Form method="post" className="inline-block">
+      <input type="hidden" name="intent" value="deleteExpense" />
+      <input type="hidden" name="id" value={id} />
+      <Button
+        type="submit"
+        variant="destructive"
+        size="sm"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? "…" : "Supprimer"}
+      </Button>
+    </fetcher.Form>
+  );
+}
+
+function IncomeRow({
+  income,
+  isClosed,
+}: {
+  income: ReturnType<typeof useLoaderData<typeof loader>>["state"]["incomes"][number];
+  isClosed: boolean;
+}) {
+  const fetcher = useFetcher<typeof action>();
+  const isSubmitting = fetcher.state === "submitting";
+  const error =
+    fetcher.data && "error" in fetcher.data ? fetcher.data.error : null;
+  return (
+    <li className="py-4">
+      <fetcher.Form
+        method="post"
+        className="grid grid-cols-1 items-baseline gap-3 sm:grid-cols-[1fr_auto_auto_auto]"
+      >
+        <input type="hidden" name="intent" value="updateIncome" />
+        <input type="hidden" name="memberId" value={income.memberId} />
+        <p className="font-heading text-lg text-ink">{income.name}</p>
+        <IncomeField
+          name="amount"
+          label="Revenu"
+          defaultValue={income.amount}
+          disabled={isClosed}
+        />
+        <IncomeField
+          name="costOfLiving"
+          label="Reste à vivre"
+          defaultValue={income.costOfLiving}
+          disabled={isClosed}
+        />
+        <div className="pt-2 sm:pt-0">
+          {!isClosed && (
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "…" : "Enregistrer"}
+            </Button>
+          )}
+        </div>
+      </fetcher.Form>
+      {error && (
+        <p className="mt-2 text-sm text-danger" role="alert">
+          <span aria-hidden className="mr-2">—</span>
+          {error}
+        </p>
+      )}
+    </li>
   );
 }
 
@@ -448,6 +439,114 @@ function IncomeField({
         className="num text-right"
       />
     </div>
+  );
+}
+
+function AddExpenseForm({
+  categories,
+  incomes,
+}: {
+  categories: ReturnType<typeof useLoaderData<typeof loader>>["categories"];
+  incomes: ReturnType<typeof useLoaderData<typeof loader>>["state"]["incomes"];
+}) {
+  const fetcher = useFetcher<typeof action>();
+  const formRef = useRef<HTMLFormElement>(null);
+  const isSubmitting = fetcher.state === "submitting";
+  const submittedOk =
+    fetcher.state === "idle" && fetcher.data && !("error" in fetcher.data);
+
+  useEffect(() => {
+    if (submittedOk) {
+      formRef.current?.reset();
+      formRef.current
+        ?.querySelector<HTMLInputElement>('input[name="label"]')
+        ?.focus();
+    }
+  }, [submittedOk]);
+
+  return (
+    <fetcher.Form
+      ref={formRef}
+      method="post"
+      className="mt-8 grid grid-cols-1 gap-5 border-t border-rule pt-6 sm:grid-cols-[10rem_1fr_9rem_auto]"
+      aria-labelledby="add-expense-title"
+    >
+      <p id="add-expense-title" className="eyebrow sm:col-span-4 -mb-2">
+        Ajouter une dépense
+      </p>
+      <input type="hidden" name="intent" value="addExpense" />
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="categoryId">Catégorie</Label>
+        <select
+          id="categoryId"
+          name="categoryId"
+          required
+          className="border-0 border-b border-rule bg-transparent py-1.5 text-base text-ink outline-none focus:border-accent focus-visible:outline-none"
+        >
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="expense-label">Libellé</Label>
+        <Input
+          id="expense-label"
+          name="label"
+          placeholder="Ex : électricité"
+          required
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="expense-amount">Montant (€)</Label>
+        <Input
+          id="expense-amount"
+          name="amount"
+          placeholder="0,00"
+          required
+          inputMode="decimal"
+          className="num"
+        />
+      </div>
+      <div className="flex items-end">
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full sm:w-auto"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Ajout…" : "Ajouter"}
+        </Button>
+      </div>
+      <fieldset className="sm:col-span-4">
+        <legend className="eyebrow mb-2">Concernés</legend>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {incomes.map((i) => (
+            <label
+              key={i.memberId}
+              className="inline-flex items-center gap-2 text-sm text-ink"
+            >
+              <input
+                type="checkbox"
+                name="memberIds"
+                value={i.memberId}
+                defaultChecked
+                className="size-3.5 accent-ink"
+              />
+              {i.name}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {fetcher.data && "error" in fetcher.data && (
+        <p className="sm:col-span-4 text-sm text-danger" role="alert">
+          <span aria-hidden className="mr-2">—</span>
+          {fetcher.data.error}
+        </p>
+      )}
+    </fetcher.Form>
   );
 }
 
@@ -541,19 +640,7 @@ function ExpenseSubList({
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
-                {!isClosed && (
-                  <Form method="post" className="inline-block">
-                    <input
-                      type="hidden"
-                      name="intent"
-                      value="deleteExpense"
-                    />
-                    <input type="hidden" name="id" value={e.id} />
-                    <Button type="submit" variant="destructive" size="sm">
-                      Supprimer
-                    </Button>
-                  </Form>
-                )}
+                {!isClosed && <DeleteExpenseButton id={e.id} />}
               </div>
             </li>
           ))}
