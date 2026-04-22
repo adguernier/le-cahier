@@ -130,8 +130,14 @@ export default function MonthDetail() {
     state.incomes.find((i) => i.memberId === id)?.name ?? `#${id}`;
 
   const totalIncome = state.incomes.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = state.expenses.reduce((s, e) => s + e.amount, 0);
-  const hasResults = results.proportional.length > 0 && totalExpenses > 0;
+  const commonExpenses = state.expenses.filter((e) => e.memberIds.length >= 2);
+  const individualExpenses = state.expenses.filter(
+    (e) => e.memberIds.length === 1
+  );
+  const totalCommon = commonExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalIndividual = individualExpenses.reduce((s, e) => s + e.amount, 0);
+  const hasResults = results.proportional.length > 0 && totalCommon > 0;
+  const hasIndividualTotals = results.individualTotals.some((t) => t.total > 0);
 
   return (
     <AppShell>
@@ -229,53 +235,28 @@ export default function MonthDetail() {
                 Ce qui est sorti
               </h2>
             </div>
-            <p className="num text-sm text-ink-soft">
-              <span className="eyebrow mr-2">total</span>
-              <span className="text-ink">{formatEuros(totalExpenses)}</span>
-            </p>
           </div>
 
-          {state.expenses.length === 0 ? (
-            <p className="mb-6 text-ink-soft">
-              Rien n’est encore noté pour ce mois.
-            </p>
-          ) : (
-            <ul className="divide-y divide-rule border-t border-rule-strong">
-              {state.expenses.map((e) => (
-                <li
-                  key={e.id}
-                  className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-6 gap-y-1 py-3 sm:grid-cols-[10ch_1fr_auto_auto]"
-                >
-                  <span className="eyebrow">{e.categoryName}</span>
-                  <span className="text-ink">{e.label}</span>
-                  <span className="num text-right text-ink">
-                    {formatEuros(e.amount)}
-                  </span>
-                  <div className="col-span-3 flex flex-wrap items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
-                    <span className="text-xs text-ink-soft sm:mr-4">
-                      {e.memberIds
-                        .map((id) => memberById.get(id)?.name)
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                    {!isClosed && (
-                      <Form method="post" className="inline-block">
-                        <input
-                          type="hidden"
-                          name="intent"
-                          value="deleteExpense"
-                        />
-                        <input type="hidden" name="id" value={e.id} />
-                        <Button type="submit" variant="destructive" size="sm">
-                          Supprimer
-                        </Button>
-                      </Form>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="space-y-10">
+            <ExpenseSubList
+              title="Dépenses communes"
+              hint="partagées par le compte commun"
+              total={totalCommon}
+              expenses={commonExpenses}
+              memberById={memberById}
+              isClosed={isClosed}
+              emptyLabel="Aucune dépense commune ce mois."
+            />
+            <ExpenseSubList
+              title="Dépenses individuelles"
+              hint="à la charge d’une seule personne"
+              total={totalIndividual}
+              expenses={individualExpenses}
+              memberById={memberById}
+              isClosed={isClosed}
+              emptyLabel="Aucune dépense individuelle ce mois."
+            />
+          </div>
 
           {!isClosed && (
             <Form
@@ -360,19 +341,19 @@ export default function MonthDetail() {
           aria-labelledby="results-title"
         >
           <div className="mb-8">
-            <p className="eyebrow">À payer ce mois</p>
+            <p className="eyebrow">Compte commun</p>
             <h2
               id="results-title"
               className="mt-2 font-heading text-3xl leading-tight text-ink"
             >
-              La part de chacun
+              À verser ce mois
             </h2>
           </div>
 
           {!hasResults ? (
             <p className="text-ink-soft">
-              Renseignez les revenus et les dépenses pour voir apparaître les
-              parts.
+              Renseignez les revenus et au moins une dépense commune pour voir
+              apparaître les parts à verser.
             </p>
           ) : (
             <div className="grid gap-10 md:grid-cols-2">
@@ -388,6 +369,22 @@ export default function MonthDetail() {
                 rows={results.afterCostOfLiving}
                 memberName={memberName}
               />
+            </div>
+          )}
+          {hasIndividualTotals && (
+            <div className="mt-10 border-t border-rule pt-6">
+              <p className="eyebrow mb-2">Dépenses personnelles</p>
+              <ul className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-soft">
+                {results.individualTotals
+                  .filter((t) => t.total > 0)
+                  .map((t) => (
+                    <li key={t.memberId} className="num">
+                      <span className="text-ink">{memberName(t.memberId)}</span>
+                      <span className="mx-2">—</span>
+                      <span className="text-ink">{formatEuros(t.total)}</span>
+                    </li>
+                  ))}
+              </ul>
             </div>
           )}
         </section>
@@ -485,6 +482,86 @@ function ResultColumn({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+type MonthExpense = ReturnType<
+  typeof useLoaderData<typeof loader>
+>["state"]["expenses"][number];
+
+type MonthMember = ReturnType<
+  typeof useLoaderData<typeof loader>
+>["members"][number];
+
+function ExpenseSubList({
+  title,
+  hint,
+  total,
+  expenses,
+  memberById,
+  isClosed,
+  emptyLabel,
+}: {
+  title: string;
+  hint: string;
+  total: number;
+  expenses: MonthExpense[];
+  memberById: Map<number, MonthMember>;
+  isClosed: boolean;
+  emptyLabel: string;
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex items-baseline justify-between gap-4">
+        <div>
+          <h3 className="font-heading text-lg text-ink">{title}</h3>
+          <p className="text-xs text-ink-soft">{hint}</p>
+        </div>
+        <p className="num text-sm text-ink-soft">
+          <span className="eyebrow mr-2">sous-total</span>
+          <span className="text-ink">{formatEuros(total)}</span>
+        </p>
+      </div>
+      {expenses.length === 0 ? (
+        <p className="text-sm italic text-ink-soft">{emptyLabel}</p>
+      ) : (
+        <ul className="divide-y divide-rule border-t border-rule-strong">
+          {expenses.map((e) => (
+            <li
+              key={e.id}
+              className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-6 gap-y-1 py-3 sm:grid-cols-[10ch_1fr_auto_auto]"
+            >
+              <span className="eyebrow">{e.categoryName}</span>
+              <span className="text-ink">{e.label}</span>
+              <span className="num text-right text-ink">
+                {formatEuros(e.amount)}
+              </span>
+              <div className="col-span-3 flex flex-wrap items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
+                <span className="text-xs text-ink-soft sm:mr-4">
+                  {e.memberIds
+                    .map((id) => memberById.get(id)?.name)
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+                {!isClosed && (
+                  <Form method="post" className="inline-block">
+                    <input
+                      type="hidden"
+                      name="intent"
+                      value="deleteExpense"
+                    />
+                    <input type="hidden" name="id" value={e.id} />
+                    <Button type="submit" variant="destructive" size="sm">
+                      Supprimer
+                    </Button>
+                  </Form>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
