@@ -1,0 +1,36 @@
+app/lib/queries.server.ts
+  8ca68fad64fe8c76 267-286
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "e982a7978d6d6e658a3a3e467ffac70ac83a3a40",
+  "prompts": {
+    "7d9223750d432e82": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2dc250e4-e59c-4655-9356-773c266f6619",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "8ca68fad64fe8c76": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b58b93eb-64e5-449f-abc0-172a01fe6ffc",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    }
+  }
+}
