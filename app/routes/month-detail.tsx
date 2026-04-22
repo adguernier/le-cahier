@@ -247,14 +247,11 @@ export default function MonthDetail() {
               isClosed={isClosed}
               emptyLabel="Aucune dépense commune ce mois."
             />
-            <ExpenseSubList
-              title="Dépenses individuelles"
-              hint="à la charge d’une seule personne"
+            <IndividualExpensesByMember
               total={totalIndividual}
               expenses={individualExpenses}
-              memberById={memberById}
+              members={members}
               isClosed={isClosed}
-              emptyLabel="Aucune dépense individuelle ce mois."
             />
           </div>
 
@@ -561,6 +558,106 @@ function ExpenseSubList({
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function IndividualExpensesByMember({
+  total,
+  expenses,
+  members,
+  isClosed,
+}: {
+  total: number;
+  expenses: MonthExpense[];
+  members: MonthMember[];
+  isClosed: boolean;
+}) {
+  const byMember = new Map<number, MonthExpense[]>();
+  for (const e of expenses) {
+    const id = e.memberIds[0];
+    if (id == null) continue;
+    const list = byMember.get(id) ?? [];
+    list.push(e);
+    byMember.set(id, list);
+  }
+
+  const groups = members
+    .map((m) => ({ member: m, items: byMember.get(m.id) ?? [] }))
+    .filter((g) => g.items.length > 0);
+
+  return (
+    <div>
+      <div className="mb-3 flex items-baseline justify-between gap-4">
+        <div>
+          <h3 className="font-heading text-lg text-ink">
+            Dépenses individuelles
+          </h3>
+          <p className="text-xs text-ink-soft">
+            à la charge d’une seule personne
+          </p>
+        </div>
+        <p className="num text-sm text-ink-soft">
+          <span className="eyebrow mr-2">sous-total</span>
+          <span className="text-ink">{formatEuros(total)}</span>
+        </p>
+      </div>
+      {groups.length === 0 ? (
+        <p className="text-sm italic text-ink-soft">
+          Aucune dépense individuelle ce mois.
+        </p>
+      ) : (
+        <div className="space-y-6 border-t border-rule-strong">
+          {groups.map((g) => {
+            const memberTotal = g.items.reduce((s, e) => s + e.amount, 0);
+            return (
+              <div key={g.member.id} className="pt-4">
+                <div className="mb-2 flex items-baseline justify-between gap-4">
+                  <h4 className="font-heading text-base text-ink">
+                    {g.member.name}
+                  </h4>
+                  <p className="num text-sm text-ink">
+                    {formatEuros(memberTotal)}
+                  </p>
+                </div>
+                <ul className="divide-y divide-rule">
+                  {g.items.map((e) => (
+                    <li
+                      key={e.id}
+                      className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-6 gap-y-1 py-3 sm:grid-cols-[10ch_1fr_auto_auto]"
+                    >
+                      <span className="eyebrow">{e.categoryName}</span>
+                      <span className="text-ink">{e.label}</span>
+                      <span className="num text-right text-ink">
+                        {formatEuros(e.amount)}
+                      </span>
+                      <div className="col-span-3 flex justify-end sm:col-span-1">
+                        {!isClosed && (
+                          <Form method="post" className="inline-block">
+                            <input
+                              type="hidden"
+                              name="intent"
+                              value="deleteExpense"
+                            />
+                            <input type="hidden" name="id" value={e.id} />
+                            <Button
+                              type="submit"
+                              variant="destructive"
+                              size="sm"
+                            >
+                              Supprimer
+                            </Button>
+                          </Form>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
