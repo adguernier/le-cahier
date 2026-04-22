@@ -1,0 +1,23 @@
+Taskfile.yml
+  7d9223750d432e82 63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "4709f6ae9c931c8d8d85896019782fb274f29bab",
+  "prompts": {
+    "7d9223750d432e82": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2dc250e4-e59c-4655-9356-773c266f6619",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
