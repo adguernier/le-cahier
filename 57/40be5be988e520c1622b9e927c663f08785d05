@@ -1,0 +1,25 @@
+tests/calc.test.ts
+  5e842feb32e7d93c 20,27-30,116-180
+app/lib/calc.ts
+  5e842feb32e7d93c 30,74-76,84-85,98,106-114,132-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "5740be5be988e520c1622b9e927c663f08785d05",
+  "prompts": {
+    "5e842feb32e7d93c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "910f9d1c-b2c5-48b6-a5d4-929a2bd8c4ec",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 806,
+      "total_deletions": 11,
+      "accepted_lines": 800,
+      "overriden_lines": 0
+    }
+  }
+}
