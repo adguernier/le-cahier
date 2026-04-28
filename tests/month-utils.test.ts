@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatYyyyMm, monthLabel, nextMonth, parseYyyyMm } from "~/lib/month-utils";
+import { formatYyyyMm, monthLabel, nextMonth, parseYyyyMm, prevMonth } from "~/lib/month-utils";
 
 describe("month-utils", () => {
   test("parseYyyyMm parses 'YYYY-MM'", () => {
@@ -25,5 +25,15 @@ describe("month-utils", () => {
   test("monthLabel returns French full name", () => {
     expect(monthLabel(2026, 4)).toBe("Avril 2026");
     expect(monthLabel(2026, 1)).toBe("Janvier 2026");
+  });
+});
+
+describe("prevMonth", () => {
+  test("standard month decrement", () => {
+    expect(prevMonth(2026, 5)).toEqual({ year: 2026, month: 4 });
+  });
+
+  test("January wraps to previous December", () => {
+    expect(prevMonth(2026, 1)).toEqual({ year: 2025, month: 12 });
   });
 });

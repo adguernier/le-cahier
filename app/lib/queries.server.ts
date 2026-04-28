@@ -8,7 +8,7 @@ import {
   monthlyIncomes,
   months,
 } from "./schema";
-import { nextMonth as calendarNext } from "./month-utils";
+import { nextMonth as calendarNext, prevMonth } from "./month-utils";
 import type { CalcInput } from "./calc";
 
 // --- Members ---
@@ -537,10 +537,11 @@ export function applyRollover(today: Date): void {
     (cursor.year === targetYear && cursor.month < targetMonth)
   ) {
     if (!getMonth(cursor.year, cursor.month)) {
-      const prev = getMonth(
-        cursor.month === 1 ? cursor.year - 1 : cursor.year,
-        cursor.month === 1 ? 12 : cursor.month - 1
+      const { year: prevYear, month: prevMo } = prevMonth(
+        cursor.year,
+        cursor.month
       );
+      const prev = getMonth(prevYear, prevMo);
       if (prev) {
         const created = ensureDraft(prev.id);
         db.update(months)
@@ -566,10 +567,11 @@ export function applyRollover(today: Date): void {
   // draft, flip to open. If present as open/closed, leave alone.
   const target = getMonth(targetYear, targetMonth);
   if (!target) {
-    const prev = getMonth(
-      targetMonth === 1 ? targetYear - 1 : targetYear,
-      targetMonth === 1 ? 12 : targetMonth - 1
+    const { year: prevYear, month: prevMo } = prevMonth(
+      targetYear,
+      targetMonth
     );
+    const prev = getMonth(prevYear, prevMo);
     if (prev) {
       const created = ensureDraft(prev.id);
       db.update(months)
@@ -586,13 +588,13 @@ export function applyRollover(today: Date): void {
       .run();
   }
 
-  // Close any open month strictly before target.
-  const openBefore = db
+  // Close any open or draft month strictly before target.
+  const stale = db
     .select()
     .from(months)
-    .where(eq(months.status, "open"))
+    .where(inArray(months.status, ["open", "draft"]))
     .all();
-  for (const m of openBefore) {
+  for (const m of stale) {
     if (
       m.year < targetYear ||
       (m.year === targetYear && m.month < targetMonth)

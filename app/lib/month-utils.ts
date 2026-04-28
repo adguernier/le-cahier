@@ -34,6 +34,14 @@ export function nextMonth(
   return { year, month: month + 1 };
 }
 
+export function prevMonth(
+  year: number,
+  month: number
+): { year: number; month: number } {
+  if (month === 1) return { year: year - 1, month: 12 };
+  return { year, month: month - 1 };
+}
+
 export function monthLabel(year: number, month: number): string {
   return `${LABELS[month - 1]} ${year}`;
 }

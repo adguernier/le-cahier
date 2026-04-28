@@ -12,6 +12,7 @@ vi.mock("~/lib/db.server", () => {
   return { db };
 });
 
+import { db } from "~/lib/db.server";
 import {
   addExpense,
   applyRollover,
@@ -113,5 +114,20 @@ describe("applyRollover", () => {
     closeMonth(may.id);
     applyRollover(new Date(2028, 4, 29));
     expect(getMonth(2028, 5)!.status).toBe("closed");
+  });
+
+  test("stale draft strictly before target is closed by the sweep", () => {
+    // Insert a draft row for 2028-06 directly (simulating a previewed forecast
+    // that was never opened).
+    db.insert(schema.months)
+      .values({ year: 2028, month: 6, status: "draft" })
+      .run();
+    expect(getMonth(2028, 6)!.status).toBe("draft");
+
+    // Advance to 2028-08 — June is now strictly before the target.
+    applyRollover(new Date(2028, 7, 1)); // 2028-08
+
+    expect(getMonth(2028, 6)!.status).toBe("closed");
+    expect(getMonth(2028, 8)!.status).toBe("open");
   });
 });
