@@ -22,7 +22,9 @@ import {
   deleteCategory,
   deleteExpense,
   duplicateMonth,
+  ensureDraft,
   getMonth,
+  getForecastInput,
   getMonthState,
   listActiveMembers,
   listCategories,
@@ -225,5 +227,101 @@ describe("expense recurring flag", () => {
     const state = getMonthState(m.id);
     const row = state.expenses.find((e) => e.id === exp.id)!;
     expect(row.recurring).toBe(1);
+  });
+});
+
+// --- ensureDraft ---
+
+describe("ensureDraft", () => {
+  test("creates a draft for the next calendar month seeded with recurring expenses and incomes", () => {
+    const m = createMonth(2027, 1);
+    const active = listActiveMembers();
+    const alice = active[0];
+    updateIncome(m.id, alice.id, { amount: 250000, costOfLiving: 90000 });
+    const loyer = listCategories().find((c) => c.name === "Loyer")!;
+    const autre = listCategories().find((c) => c.name === "Autre")!;
+    addExpense(m.id, {
+      label: "Loyer janvier",
+      amount: 100000,
+      categoryId: loyer.id,
+      memberIds: [alice.id],
+      recurring: 1,
+    });
+    addExpense(m.id, {
+      label: "Plombier",
+      amount: 6000,
+      categoryId: autre.id,
+      memberIds: [alice.id],
+      recurring: 0,
+    });
+
+    const draft = ensureDraft(m.id);
+    expect(draft.year).toBe(2027);
+    expect(draft.month).toBe(2);
+    expect(draft.status).toBe("draft");
+
+    const state = getMonthState(draft.id);
+    expect(state.expenses).toHaveLength(1);
+    expect(state.expenses[0].label).toBe("Loyer janvier");
+    expect(state.expenses[0].recurring).toBe(1);
+    expect(state.expenses[0].memberIds).toEqual([alice.id]);
+    const aliceIncome = state.incomes.find((i) => i.memberId === alice.id)!;
+    expect(aliceIncome.amount).toBe(250000);
+    expect(aliceIncome.costOfLiving).toBe(90000);
+  });
+
+  test("ensureDraft is idempotent — returns the same row and does not duplicate", () => {
+    const m = getMonth(2027, 1)!;
+    const first = ensureDraft(m.id);
+    const second = ensureDraft(m.id);
+    expect(second.id).toBe(first.id);
+    const state = getMonthState(first.id);
+    expect(state.expenses).toHaveLength(1);
+  });
+
+  test("ensureDraft returns the existing row when the target month is already closed", () => {
+    const m = createMonth(2027, 3);
+    const existing = ensureDraft(m.id);
+    // The target is 2027-04, which does not exist yet → draft created.
+    expect(existing.status).toBe("draft");
+    // Manually close it, then call ensureDraft again.
+    closeMonth(existing.id);
+    const again = ensureDraft(m.id);
+    expect(again.id).toBe(existing.id);
+    expect(again.status).toBe("closed"); // no re-creation, status preserved
+  });
+});
+
+// --- getForecastInput ---
+
+describe("getForecastInput", () => {
+  test("returns only recurring expenses with current-month incomes", () => {
+    const m = createMonth(2027, 6);
+    const active = listActiveMembers();
+    const alice = active[0];
+    updateIncome(m.id, alice.id, { amount: 180000, costOfLiving: 70000 });
+    const loyer = listCategories().find((c) => c.name === "Loyer")!;
+    const autre = listCategories().find((c) => c.name === "Autre")!;
+    addExpense(m.id, {
+      label: "Loyer",
+      amount: 95000,
+      categoryId: loyer.id,
+      memberIds: [alice.id],
+      recurring: 1,
+    });
+    addExpense(m.id, {
+      label: "Ponctuelle",
+      amount: 3000,
+      categoryId: autre.id,
+      memberIds: [alice.id],
+      recurring: 0,
+    });
+
+    const input = getForecastInput(m.id);
+    expect(input.members).toHaveLength(1);
+    expect(input.members[0].income).toBe(180000);
+    expect(input.expenses).toHaveLength(1);
+    expect(input.expenses[0].amount).toBe(95000);
+    expect(input.expenses[0].memberIds).toEqual([alice.id]);
   });
 });

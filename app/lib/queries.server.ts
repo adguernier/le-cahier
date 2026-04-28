@@ -8,6 +8,7 @@ import {
   monthlyIncomes,
   months,
 } from "./schema";
+import { nextMonth as calendarNext } from "./month-utils";
 
 // --- Members ---
 
@@ -430,4 +431,133 @@ export function duplicateMonth(
   }
 
   return newRow;
+}
+
+// --- Draft for the next calendar month ---
+
+export function ensureDraft(currentMonthId: number) {
+  const current = getMonthById(currentMonthId);
+  if (!current) throw new Error("Month not found");
+
+  const { year: nextYear, month: nextMo } = calendarNext(
+    current.year,
+    current.month
+  );
+  const existing = getMonth(nextYear, nextMo);
+  if (existing) return existing;
+
+  const draft = db
+    .insert(months)
+    .values({ year: nextYear, month: nextMo, status: "draft" })
+    .returning()
+    .get();
+
+  const active = new Set(listActiveMembers().map((m) => m.id));
+
+  const srcIncomes = db
+    .select()
+    .from(monthlyIncomes)
+    .where(eq(monthlyIncomes.monthId, currentMonthId))
+    .all();
+  for (const i of srcIncomes) {
+    if (!active.has(i.memberId)) continue;
+    db.insert(monthlyIncomes)
+      .values({
+        monthId: draft.id,
+        memberId: i.memberId,
+        amount: i.amount,
+        costOfLiving: i.costOfLiving,
+      })
+      .run();
+  }
+
+  const recurringSrc = db
+    .select()
+    .from(expenses)
+    .where(
+      and(eq(expenses.monthId, currentMonthId), eq(expenses.recurring, 1))
+    )
+    .all();
+  for (const e of recurringSrc) {
+    const newExp = db
+      .insert(expenses)
+      .values({
+        monthId: draft.id,
+        categoryId: e.categoryId,
+        label: e.label,
+        amount: e.amount,
+        recurring: 1,
+      })
+      .returning()
+      .get();
+    const assigns = db
+      .select()
+      .from(expenseMembers)
+      .where(eq(expenseMembers.expenseId, e.id))
+      .all();
+    for (const a of assigns) {
+      if (!active.has(a.memberId)) continue;
+      db.insert(expenseMembers)
+        .values({ expenseId: newExp.id, memberId: a.memberId })
+        .run();
+    }
+  }
+
+  return draft;
+}
+
+export type ForecastInput = {
+  members: { id: number; name: string; income: number; costOfLiving: number }[];
+  expenses: { id: number; amount: number; memberIds: number[] }[];
+};
+
+export function getForecastInput(currentMonthId: number): ForecastInput {
+  const incomes = db
+    .select({
+      memberId: monthlyIncomes.memberId,
+      name: members.name,
+      amount: monthlyIncomes.amount,
+      costOfLiving: monthlyIncomes.costOfLiving,
+    })
+    .from(monthlyIncomes)
+    .innerJoin(members, eq(members.id, monthlyIncomes.memberId))
+    .where(eq(monthlyIncomes.monthId, currentMonthId))
+    .orderBy(asc(members.name))
+    .all();
+
+  const expenseRows = db
+    .select({
+      id: expenses.id,
+      amount: expenses.amount,
+    })
+    .from(expenses)
+    .where(
+      and(eq(expenses.monthId, currentMonthId), eq(expenses.recurring, 1))
+    )
+    .orderBy(asc(expenses.id))
+    .all();
+
+  const assigns = db.select().from(expenseMembers).all();
+  const memberIdSet = new Set(expenseRows.map((r) => r.id));
+  const byExpense = new Map<number, number[]>();
+  for (const a of assigns) {
+    if (!memberIdSet.has(a.expenseId)) continue;
+    const list = byExpense.get(a.expenseId) ?? [];
+    list.push(a.memberId);
+    byExpense.set(a.expenseId, list);
+  }
+
+  return {
+    members: incomes.map((i) => ({
+      id: i.memberId,
+      name: i.name,
+      income: i.amount,
+      costOfLiving: i.costOfLiving,
+    })),
+    expenses: expenseRows.map((e) => ({
+      id: e.id,
+      amount: e.amount,
+      memberIds: (byExpense.get(e.id) ?? []).sort((a, b) => a - b),
+    })),
+  };
 }
