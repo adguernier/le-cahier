@@ -1,0 +1,1 @@
+ALTER TABLE `expenses` ADD `recurring` integer DEFAULT 0 NOT NULL;

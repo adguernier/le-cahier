@@ -35,7 +35,7 @@ export const months = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     year: integer("year").notNull(),
     month: integer("month").notNull(),
-    status: text("status", { enum: ["open", "closed"] })
+    status: text("status", { enum: ["draft", "open", "closed"] })
       .notNull()
       .default("open"),
   },
@@ -71,6 +71,7 @@ export const expenses = sqliteTable("expenses", {
     .references(() => categories.id),
   label: text("label").notNull(),
   amount: integer("amount").notNull(),
+  recurring: integer("recurring").notNull().default(0),
 });
 
 export const expenseMembers = sqliteTable(
