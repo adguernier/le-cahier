@@ -1,0 +1,30 @@
+tests/queries.test.ts
+  f6a28e2d77dd271b 25,27,232-327
+app/lib/queries.server.ts
+  f6a28e2d77dd271b 11,435-563
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "8ac479666b49186c2435f66adfd7e61663f7f6db",
+  "prompts": {
+    "f6a28e2d77dd271b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "956aaf06-58fc-47c4-a7ef-8ec876d010be",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier",
+      "messages": [],
+      "total_additions": 228,
+      "total_deletions": 0,
+      "accepted_lines": 228,
+      "overriden_lines": 0
+    }
+  },
+  "humans": {
+    "h_c2d6c943659315": {
+      "author": "adguernier"
+    }
+  }
+}
