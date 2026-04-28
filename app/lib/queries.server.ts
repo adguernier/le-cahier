@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "./db.server";
 import {
   categories,
@@ -9,6 +9,7 @@ import {
   months,
 } from "./schema";
 import { nextMonth as calendarNext } from "./month-utils";
+import type { CalcInput } from "./calc";
 
 // --- Members ---
 
@@ -446,12 +447,6 @@ export function ensureDraft(currentMonthId: number) {
   const existing = getMonth(nextYear, nextMo);
   if (existing) return existing;
 
-  const draft = db
-    .insert(months)
-    .values({ year: nextYear, month: nextMo, status: "draft" })
-    .returning()
-    .get();
-
   const active = new Set(listActiveMembers().map((m) => m.id));
 
   const srcIncomes = db
@@ -459,17 +454,6 @@ export function ensureDraft(currentMonthId: number) {
     .from(monthlyIncomes)
     .where(eq(monthlyIncomes.monthId, currentMonthId))
     .all();
-  for (const i of srcIncomes) {
-    if (!active.has(i.memberId)) continue;
-    db.insert(monthlyIncomes)
-      .values({
-        monthId: draft.id,
-        memberId: i.memberId,
-        amount: i.amount,
-        costOfLiving: i.costOfLiving,
-      })
-      .run();
-  }
 
   const recurringSrc = db
     .select()
@@ -478,38 +462,56 @@ export function ensureDraft(currentMonthId: number) {
       and(eq(expenses.monthId, currentMonthId), eq(expenses.recurring, 1))
     )
     .all();
-  for (const e of recurringSrc) {
-    const newExp = db
-      .insert(expenses)
-      .values({
-        monthId: draft.id,
-        categoryId: e.categoryId,
-        label: e.label,
-        amount: e.amount,
-        recurring: 1,
-      })
+
+  return db.transaction((tx) => {
+    const draft = tx
+      .insert(months)
+      .values({ year: nextYear, month: nextMo, status: "draft" })
       .returning()
       .get();
-    const assigns = db
-      .select()
-      .from(expenseMembers)
-      .where(eq(expenseMembers.expenseId, e.id))
-      .all();
-    for (const a of assigns) {
-      if (!active.has(a.memberId)) continue;
-      db.insert(expenseMembers)
-        .values({ expenseId: newExp.id, memberId: a.memberId })
+
+    for (const i of srcIncomes) {
+      if (!active.has(i.memberId)) continue;
+      tx.insert(monthlyIncomes)
+        .values({
+          monthId: draft.id,
+          memberId: i.memberId,
+          amount: i.amount,
+          costOfLiving: i.costOfLiving,
+        })
         .run();
     }
-  }
 
-  return draft;
+    for (const e of recurringSrc) {
+      const newExp = tx
+        .insert(expenses)
+        .values({
+          monthId: draft.id,
+          categoryId: e.categoryId,
+          label: e.label,
+          amount: e.amount,
+          recurring: 1,
+        })
+        .returning()
+        .get();
+      const assigns = tx
+        .select()
+        .from(expenseMembers)
+        .where(eq(expenseMembers.expenseId, e.id))
+        .all();
+      for (const a of assigns) {
+        if (!active.has(a.memberId)) continue;
+        tx.insert(expenseMembers)
+          .values({ expenseId: newExp.id, memberId: a.memberId })
+          .run();
+      }
+    }
+
+    return draft;
+  });
 }
 
-export type ForecastInput = {
-  members: { id: number; name: string; income: number; costOfLiving: number }[];
-  expenses: { id: number; amount: number; memberIds: number[] }[];
-};
+export type ForecastInput = CalcInput;
 
 export function getForecastInput(currentMonthId: number): ForecastInput {
   const incomes = db
@@ -537,11 +539,17 @@ export function getForecastInput(currentMonthId: number): ForecastInput {
     .orderBy(asc(expenses.id))
     .all();
 
-  const assigns = db.select().from(expenseMembers).all();
-  const memberIdSet = new Set(expenseRows.map((r) => r.id));
+  const expenseIds = expenseRows.map((r) => r.id);
+  const assigns =
+    expenseIds.length > 0
+      ? db
+          .select()
+          .from(expenseMembers)
+          .where(inArray(expenseMembers.expenseId, expenseIds))
+          .all()
+      : [];
   const byExpense = new Map<number, number[]>();
   for (const a of assigns) {
-    if (!memberIdSet.has(a.expenseId)) continue;
     const list = byExpense.get(a.expenseId) ?? [];
     list.push(a.memberId);
     byExpense.set(a.expenseId, list);
