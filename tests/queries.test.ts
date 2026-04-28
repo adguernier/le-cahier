@@ -29,6 +29,7 @@ import {
   listMonths,
   renameCategory,
   seedDefaultCategories,
+  updateExpense,
   updateIncome,
 } from "~/lib/queries.server";
 
@@ -166,5 +167,63 @@ describe("duplicateMonth", () => {
     expect(state.expenses).toHaveLength(1);
     expect(state.expenses[0].label).toBe("Loyer mai");
     expect(state.expenses[0].memberIds).toEqual([aliceId]);
+  });
+});
+
+// --- recurring flag ---
+
+describe("expense recurring flag", () => {
+  test("addExpense persists recurring=1 when provided", () => {
+    const m = createMonth(2026, 7);
+    const active = listActiveMembers();
+    const cat = listCategories().find((c) => c.name === "Loyer")!;
+    const exp = addExpense(m.id, {
+      label: "Loyer juillet",
+      amount: 90000,
+      categoryId: cat.id,
+      memberIds: [active[0].id],
+      recurring: 1,
+    });
+    const state = getMonthState(m.id);
+    const row = state.expenses.find((e) => e.id === exp.id)!;
+    expect(row.recurring).toBe(1);
+  });
+
+  test("addExpense defaults recurring to 0 when omitted", () => {
+    const m = getMonth(2026, 7)!;
+    const active = listActiveMembers();
+    const cat = listCategories().find((c) => c.name === "Autre")!;
+    const exp = addExpense(m.id, {
+      label: "Plombier",
+      amount: 8000,
+      categoryId: cat.id,
+      memberIds: [active[0].id],
+    });
+    const state = getMonthState(m.id);
+    const row = state.expenses.find((e) => e.id === exp.id)!;
+    expect(row.recurring).toBe(0);
+  });
+
+  test("updateExpense can toggle recurring", () => {
+    const m = getMonth(2026, 7)!;
+    const active = listActiveMembers();
+    const cat = listCategories().find((c) => c.name === "Autre")!;
+    const exp = addExpense(m.id, {
+      label: "Cadeau",
+      amount: 4000,
+      categoryId: cat.id,
+      memberIds: [active[0].id],
+      recurring: 0,
+    });
+    updateExpense(exp.id, {
+      label: "Cadeau",
+      amount: 4000,
+      categoryId: cat.id,
+      memberIds: [active[0].id],
+      recurring: 1,
+    });
+    const state = getMonthState(m.id);
+    const row = state.expenses.find((e) => e.id === exp.id)!;
+    expect(row.recurring).toBe(1);
   });
 });

@@ -33,4 +33,8 @@ export const expenseSchema = z.object({
   memberIds: z
     .array(z.coerce.number().int().positive())
     .min(1, "Au moins un membre"),
+  recurring: z
+    .union([z.literal("on"), z.literal("true"), z.literal("1"), z.literal("")])
+    .optional()
+    .transform((v) => (v === "on" || v === "true" || v === "1" ? 1 : 0)),
 });

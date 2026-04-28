@@ -186,6 +186,7 @@ export function addExpense(
     amount: number;
     categoryId: number;
     memberIds: number[];
+    recurring?: number;
   }
 ) {
   const exp = db
@@ -195,6 +196,7 @@ export function addExpense(
       label: input.label,
       amount: input.amount,
       categoryId: input.categoryId,
+      recurring: input.recurring ?? 0,
     })
     .returning()
     .get();
@@ -213,6 +215,7 @@ export function updateExpense(
     amount: number;
     categoryId: number;
     memberIds: number[];
+    recurring?: number;
   }
 ) {
   db.update(expenses)
@@ -220,6 +223,7 @@ export function updateExpense(
       label: input.label,
       amount: input.amount,
       categoryId: input.categoryId,
+      recurring: input.recurring ?? 0,
     })
     .where(eq(expenses.id, id))
     .run();
@@ -242,7 +246,7 @@ export type MonthState = {
     id: number;
     year: number;
     month: number;
-    status: "open" | "closed";
+    status: "draft" | "open" | "closed";
   };
   incomes: {
     memberId: number;
@@ -257,6 +261,7 @@ export type MonthState = {
     categoryId: number;
     categoryName: string;
     memberIds: number[];
+    recurring: number;
   }[];
 };
 
@@ -304,6 +309,7 @@ export function getMonthState(monthId: number): MonthState {
       amount: expenses.amount,
       categoryId: expenses.categoryId,
       categoryName: categories.name,
+      recurring: expenses.recurring,
     })
     .from(expenses)
     .innerJoin(categories, eq(categories.id, expenses.categoryId))
@@ -332,7 +338,7 @@ export function getMonthState(monthId: number): MonthState {
       id: m.id,
       year: m.year,
       month: m.month,
-      status: m.status as "open" | "closed",
+      status: m.status as "draft" | "open" | "closed",
     },
     incomes: incomeRows,
     expenses: expenseRows.map((e) => ({
