@@ -1,26 +1,22 @@
 import { redirect } from "react-router";
 import type { Route } from "./+types/home";
 import { requireAuth } from "~/lib/session.server";
-import { createMonth, getMonth, listMonths } from "~/lib/queries.server";
+import { applyRollover, listMonths } from "~/lib/queries.server";
 import { formatYyyyMm } from "~/lib/month-utils";
 
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
+
+  applyRollover(new Date());
+
+  const all = listMonths();
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  let current = getMonth(year, month);
-  if (!current) {
-    const existing = listMonths();
-    if (existing.length === 0) {
-      current = createMonth(year, month);
-    } else {
-      const [latest] = existing;
-      throw redirect(`/months/${formatYyyyMm(latest.year, latest.month)}`);
-    }
-  }
-  throw redirect(`/months/${formatYyyyMm(current.year, current.month)}`);
+  const current = all.find((m) => m.year === year && m.month === month);
+  const target = current ?? all[0];
+  throw redirect(`/months/${formatYyyyMm(target.year, target.month)}`);
 }
 
 export default function Home() {
