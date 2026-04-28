@@ -511,6 +511,100 @@ export function ensureDraft(currentMonthId: number) {
   });
 }
 
+// --- Rollover at calendar change ---
+
+export function applyRollover(today: Date): void {
+  const targetYear = today.getFullYear();
+  const targetMonth = today.getMonth() + 1;
+
+  const all = db
+    .select()
+    .from(months)
+    .orderBy(asc(months.year), asc(months.month))
+    .all();
+
+  if (all.length === 0) {
+    createMonth(targetYear, targetMonth);
+    return;
+  }
+
+  const latest = all[all.length - 1];
+
+  // Walk from nextMonth(latest) up to target, creating closed intermediates.
+  let cursor = calendarNext(latest.year, latest.month);
+  while (
+    cursor.year < targetYear ||
+    (cursor.year === targetYear && cursor.month < targetMonth)
+  ) {
+    if (!getMonth(cursor.year, cursor.month)) {
+      const prev = getMonth(
+        cursor.month === 1 ? cursor.year - 1 : cursor.year,
+        cursor.month === 1 ? 12 : cursor.month - 1
+      );
+      if (prev) {
+        const created = ensureDraft(prev.id);
+        db.update(months)
+          .set({ status: "closed" })
+          .where(eq(months.id, created.id))
+          .run();
+      } else {
+        // Should not happen: latest exists → previous always exists for the
+        // first intermediate, and ensureDraft seeds the chain forward.
+        createMonth(cursor.year, cursor.month);
+        const row = getMonth(cursor.year, cursor.month)!;
+        db.update(months)
+          .set({ status: "closed" })
+          .where(eq(months.id, row.id))
+          .run();
+      }
+    }
+    cursor = calendarNext(cursor.year, cursor.month);
+  }
+
+  // Ensure target exists. If absent, create via ensureDraft from the previous
+  // month (which, after the walk, is guaranteed to exist). If present as
+  // draft, flip to open. If present as open/closed, leave alone.
+  const target = getMonth(targetYear, targetMonth);
+  if (!target) {
+    const prev = getMonth(
+      targetMonth === 1 ? targetYear - 1 : targetYear,
+      targetMonth === 1 ? 12 : targetMonth - 1
+    );
+    if (prev) {
+      const created = ensureDraft(prev.id);
+      db.update(months)
+        .set({ status: "open" })
+        .where(eq(months.id, created.id))
+        .run();
+    } else {
+      createMonth(targetYear, targetMonth);
+    }
+  } else if (target.status === "draft") {
+    db.update(months)
+      .set({ status: "open" })
+      .where(eq(months.id, target.id))
+      .run();
+  }
+
+  // Close any open month strictly before target.
+  const openBefore = db
+    .select()
+    .from(months)
+    .where(eq(months.status, "open"))
+    .all();
+  for (const m of openBefore) {
+    if (
+      m.year < targetYear ||
+      (m.year === targetYear && m.month < targetMonth)
+    ) {
+      db.update(months)
+        .set({ status: "closed" })
+        .where(eq(months.id, m.id))
+        .run();
+    }
+  }
+}
+
 export type ForecastInput = CalcInput;
 
 export function getForecastInput(currentMonthId: number): ForecastInput {
