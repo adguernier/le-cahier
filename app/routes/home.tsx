@@ -7,10 +7,10 @@ import { formatYyyyMm } from "~/lib/month-utils";
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
 
-  applyRollover(new Date());
+  const now = new Date();
+  applyRollover(now);
 
   const all = listMonths();
-  const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
