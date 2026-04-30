@@ -619,7 +619,12 @@ export function getForecastInput(currentMonthId: number): ForecastInput {
     })
     .from(monthlyIncomes)
     .innerJoin(members, eq(members.id, monthlyIncomes.memberId))
-    .where(eq(monthlyIncomes.monthId, currentMonthId))
+    .where(
+      and(
+        eq(monthlyIncomes.monthId, currentMonthId),
+        isNull(members.archivedAt)
+      )
+    )
     .orderBy(asc(members.name))
     .all();
 
@@ -651,6 +656,7 @@ export function getForecastInput(currentMonthId: number): ForecastInput {
     byExpense.set(a.expenseId, list);
   }
 
+  const activeIds = new Set(incomes.map((i) => i.memberId));
   return {
     members: incomes.map((i) => ({
       id: i.memberId,
@@ -661,7 +667,9 @@ export function getForecastInput(currentMonthId: number): ForecastInput {
     expenses: expenseRows.map((e) => ({
       id: e.id,
       amount: e.amount,
-      memberIds: (byExpense.get(e.id) ?? []).sort((a, b) => a - b),
+      memberIds: (byExpense.get(e.id) ?? [])
+        .filter((id) => activeIds.has(id))
+        .sort((a, b) => a - b),
     })),
   };
 }
