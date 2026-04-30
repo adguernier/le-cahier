@@ -32,3 +32,36 @@ describe("validation", () => {
     expect(r).toEqual({ amount: 150000, costOfLiving: 80000 });
   });
 });
+
+describe("expenseSchema.recurring", () => {
+  const base = {
+    label: "Loyer",
+    amount: "1200",
+    categoryId: "1",
+    memberIds: ["1"],
+  };
+
+  test('recurring: "on" (HTML checkbox checked) → 1', () => {
+    const r = expenseSchema.safeParse({ ...base, recurring: "on" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.recurring).toBe(1);
+  });
+
+  test("recurring field omitted → 0", () => {
+    const r = expenseSchema.safeParse({ ...base });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.recurring).toBe(0);
+  });
+
+  test('recurring: "1" → 1', () => {
+    const r = expenseSchema.safeParse({ ...base, recurring: "1" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.recurring).toBe(1);
+  });
+
+  test('recurring: "true" → 1', () => {
+    const r = expenseSchema.safeParse({ ...base, recurring: "true" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.recurring).toBe(1);
+  });
+});
