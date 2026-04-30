@@ -158,6 +158,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       amount: formData.get("amount"),
       categoryId: formData.get("categoryId"),
       memberIds: formData.getAll("memberIds"),
+      recurring: formData.get("recurring") ?? undefined,
     });
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     addExpense(m.id, parsed.data);
@@ -171,6 +172,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       amount: formData.get("amount"),
       categoryId: formData.get("categoryId"),
       memberIds: formData.getAll("memberIds"),
+      recurring: formData.get("recurring") ?? undefined,
     });
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     updateExpense(id, parsed.data);
@@ -609,6 +611,22 @@ function AddExpenseForm({
           ))}
         </div>
       </fieldset>
+      <div className="sm:col-span-4">
+        <label className="inline-flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            name="recurring"
+            value="on"
+            className="size-3.5 accent-ink"
+          />
+          <span>
+            Récurrente
+            <span className="ml-2 text-xs text-ink-soft">
+              (sera copiée dans le prévisionnel du mois suivant)
+            </span>
+          </span>
+        </label>
+      </div>
       {fetcher.data && "error" in fetcher.data && (
         <p className="sm:col-span-4 text-sm text-danger" role="alert">
           <span aria-hidden className="mr-2">—</span>
@@ -698,7 +716,18 @@ function ExpenseSubList({
               className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-6 gap-y-1 py-3 sm:grid-cols-[10ch_1fr_auto_auto]"
             >
               <span className="eyebrow">{e.categoryName}</span>
-              <span className="text-ink">{e.label}</span>
+              <span className="text-ink">
+                {e.label}
+                {e.recurring === 1 && (
+                  <span
+                    className="ml-2 text-xs text-ink-soft"
+                    title="Dépense récurrente — reportée dans le prévisionnel"
+                    aria-label="récurrente"
+                  >
+                    ↻
+                  </span>
+                )}
+              </span>
               <span className="num text-right text-ink">
                 {formatEuros(e.amount)}
               </span>
@@ -784,7 +813,18 @@ function IndividualExpensesByMember({
                       className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-6 gap-y-1 py-3 sm:grid-cols-[10ch_1fr_auto_auto]"
                     >
                       <span className="eyebrow">{e.categoryName}</span>
-                      <span className="text-ink">{e.label}</span>
+                      <span className="text-ink">
+                        {e.label}
+                        {e.recurring === 1 && (
+                          <span
+                            className="ml-2 text-xs text-ink-soft"
+                            title="Dépense récurrente — reportée dans le prévisionnel"
+                            aria-label="récurrente"
+                          >
+                            ↻
+                          </span>
+                        )}
+                      </span>
                       <span className="num text-right text-ink">
                         {formatEuros(e.amount)}
                       </span>
