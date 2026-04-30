@@ -14,10 +14,13 @@ import {
   closeMonth,
   deleteExpense,
   duplicateMonth,
+  ensureDraft,
+  getForecastInput,
   getMonth,
   getMonthState,
   listActiveMembers,
   listCategories,
+  listMonths,
   updateExpense,
   updateIncome,
 } from "~/lib/queries.server";
@@ -34,11 +37,27 @@ import { MonthStatusBadge } from "~/components/month-status-badge";
 export async function loader({ request, params }: Route.LoaderArgs) {
   await requireAuth(request);
   const { year, month } = parseYyyyMm(params.yyyymm!);
-  const m = getMonth(year, month);
+
+  let m = getMonth(year, month);
+
+  // If the URL is the calendar-next month of the latest open month and no
+  // row exists yet, materialise the draft now.
+  if (!m) {
+    const openMonths = listMonths().filter((x) => x.status === "open");
+    const latestOpen = openMonths[0]; // listMonths is reverse chronological
+    if (latestOpen) {
+      const adjacent = nextMonth(latestOpen.year, latestOpen.month);
+      if (adjacent.year === year && adjacent.month === month) {
+        ensureDraft(latestOpen.id);
+        m = getMonth(year, month);
+      }
+    }
+  }
+
   if (!m) throw new Response("Month not found", { status: 404 });
 
   const state = getMonthState(m.id);
-  const members = listActiveMembers();
+  const membersList = listActiveMembers();
   const cats = listCategories();
 
   const calcInput = {
@@ -56,7 +75,66 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   };
   const results = calculate(calcInput);
 
-  return { state, members, categories: cats, results };
+  // Build the forecast preview data for open months.
+  let forecast:
+    | {
+        year: number;
+        month: number;
+        source: "draft" | "computed";
+        result: ReturnType<typeof calculate>;
+        recurringCount: number;
+      }
+    | null = null;
+
+  if (m.status === "open") {
+    const next = nextMonth(year, month);
+    const existingDraft = getMonth(next.year, next.month);
+    if (existingDraft) {
+      const draftState = getMonthState(existingDraft.id);
+      const draftInput = {
+        members: draftState.incomes.map((i) => ({
+          id: i.memberId,
+          name: i.name,
+          income: i.amount,
+          costOfLiving: i.costOfLiving,
+        })),
+        expenses: draftState.expenses.map((e) => ({
+          id: e.id,
+          amount: e.amount,
+          memberIds: e.memberIds,
+        })),
+      };
+      forecast = {
+        year: next.year,
+        month: next.month,
+        source: "draft",
+        result: calculate(draftInput),
+        recurringCount: draftState.expenses.filter(
+          (e) => e.recurring === 1 && e.memberIds.length >= 2
+        ).length,
+      };
+    } else {
+      const input = getForecastInput(m.id);
+      const recurringCount = input.expenses.filter(
+        (e) => e.memberIds.length >= 2
+      ).length;
+      forecast = {
+        year: next.year,
+        month: next.month,
+        source: "computed",
+        result: calculate(input),
+        recurringCount,
+      };
+    }
+  }
+
+  return {
+    state,
+    members: membersList,
+    categories: cats,
+    results,
+    forecast,
+  };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -128,7 +206,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function MonthDetail() {
-  const { state, members, categories, results } =
+  const { state, members, categories, results, forecast } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const isClosed = state.month.status === "closed";
