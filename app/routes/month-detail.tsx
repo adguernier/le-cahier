@@ -416,7 +416,7 @@ export default function MonthDetail() {
                   ))}
                 </ul>
                 <p className="mt-3 text-xs text-ink-soft">
-                  Dépenses communes récurrentes: {forecast.recurringCount} · Total
+                  Dépenses communes prévues: {forecast.recurringCount} · Total
                   commun prévu: {formatEuros(forecastTotal)}
                 </p>
               </div>
