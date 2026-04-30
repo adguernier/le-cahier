@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import {
   Form,
   Link,
-  redirect,
   useActionData,
   useFetcher,
   useLoaderData,
@@ -13,7 +12,6 @@ import {
   addExpense,
   closeMonth,
   deleteExpense,
-  duplicateMonth,
   ensureDraft,
   getForecastInput,
   getMonth,
@@ -137,7 +135,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = String(formData.get("intent"));
 
-  if (m.status === "closed" && intent !== "duplicateMonth") {
+  if (m.status === "closed") {
     return { error: "Mois clôturé, lecture seule." };
   }
 
@@ -189,12 +187,6 @@ export async function action({ request, params }: Route.ActionArgs) {
     return { ok: true };
   }
 
-  if (intent === "duplicateMonth") {
-    const next = nextMonth(year, month);
-    const created = duplicateMonth(m.id, next.year, next.month);
-    return redirect(`/months/${formatYyyyMm(created.year, created.month)}`);
-  }
-
   return { error: "Unknown intent" };
 }
 
@@ -223,7 +215,13 @@ export default function MonthDetail() {
         {/* --- Title --- */}
         <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 rise">
           <div>
-            <p className="eyebrow">Mois en cours</p>
+            <p className="eyebrow">
+              {state.month.status === "draft"
+                ? "Prévisionnel"
+                : state.month.status === "closed"
+                  ? "Mois clôturé"
+                  : "Mois en cours"}
+            </p>
             <h1 className="mt-2 font-heading text-5xl leading-none tracking-tight text-ink">
               {monthLabel(state.month.year, state.month.month)}
             </h1>
@@ -370,29 +368,71 @@ export default function MonthDetail() {
           )}
         </section>
 
+        {/* --- Prévisionnel --- */}
+        {state.month.status === "open" && forecast && (
+          <section className="rise rise-4" aria-labelledby="forecast-title">
+            <div className="mb-5 flex items-baseline justify-between gap-4">
+              <div>
+                <p className="eyebrow">Prévisionnel</p>
+                <h2
+                  id="forecast-title"
+                  className="mt-1 font-heading text-2xl text-ink"
+                >
+                  {monthLabel(forecast.year, forecast.month)}
+                </h2>
+              </div>
+              <Link
+                to={`/months/${formatYyyyMm(forecast.year, forecast.month)}`}
+                className="text-sm text-ink-soft hover:text-ink underline-offset-4 hover:underline"
+              >
+                Éditer →
+              </Link>
+            </div>
+
+            {forecast.recurringCount === 0 ? (
+              <p className="max-w-[56ch] text-sm text-ink-soft">
+                Marque tes dépenses régulières comme <em>récurrentes</em> pour
+                voir apparaître le prévisionnel du mois suivant.
+              </p>
+            ) : (
+              <div>
+                <p className="eyebrow mb-2">À verser au compte commun (prévu)</p>
+                <ul className="divide-y divide-rule border-t border-rule">
+                  {forecast.result.proportional.map((s) => (
+                    <li
+                      key={s.memberId}
+                      className="flex items-baseline justify-between gap-4 py-3"
+                    >
+                      <span className="text-ink">
+                        {memberName(s.memberId)}
+                      </span>
+                      <span className="num font-heading text-xl text-accent">
+                        {formatEuros(s.total)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-xs text-ink-soft">
+                  Dépenses communes récurrentes: {forecast.recurringCount} · Total
+                  commun prévu:{" "}
+                  {formatEuros(
+                    forecast.result.proportional.reduce(
+                      (s, r) => s + r.total,
+                      0
+                    )
+                  )}
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
         {/* --- Month actions --- */}
         <footer className="flex flex-wrap items-center justify-between gap-6 border-t border-rule pt-8 rise rise-4">
           <Link to="/months" className="text-sm text-ink-soft hover:text-ink underline-offset-4 hover:underline">
             ← Voir l’historique
           </Link>
-          {!isClosed ? (
-            <div className="flex flex-wrap items-center gap-6">
-              <CloseMonthButton />
-              <Form method="post">
-                <input type="hidden" name="intent" value="duplicateMonth" />
-                <Button type="submit" variant="primary">
-                  Démarrer le mois suivant
-                </Button>
-              </Form>
-            </div>
-          ) : (
-            <Form method="post">
-              <input type="hidden" name="intent" value="duplicateMonth" />
-              <Button type="submit" variant="primary">
-                Démarrer le mois suivant
-              </Button>
-            </Form>
-          )}
+          {state.month.status === "open" && <CloseMonthButton />}
         </footer>
       </div>
     </AppShell>
