@@ -669,6 +669,18 @@ function ResultColumn({
   );
 }
 
+function RecurringMarker() {
+  return (
+    <span
+      className="ml-2 text-xs text-ink-soft"
+      title="Dépense récurrente — reportée dans le prévisionnel"
+      aria-label="récurrente"
+    >
+      ↻
+    </span>
+  );
+}
+
 type MonthExpense = ReturnType<
   typeof useLoaderData<typeof loader>
 >["state"]["expenses"][number];
@@ -718,15 +730,7 @@ function ExpenseSubList({
               <span className="eyebrow">{e.categoryName}</span>
               <span className="text-ink">
                 {e.label}
-                {e.recurring === 1 && (
-                  <span
-                    className="ml-2 text-xs text-ink-soft"
-                    title="Dépense récurrente — reportée dans le prévisionnel"
-                    aria-label="récurrente"
-                  >
-                    ↻
-                  </span>
-                )}
+                {e.recurring === 1 && <RecurringMarker />}
               </span>
               <span className="num text-right text-ink">
                 {formatEuros(e.amount)}
@@ -815,15 +819,7 @@ function IndividualExpensesByMember({
                       <span className="eyebrow">{e.categoryName}</span>
                       <span className="text-ink">
                         {e.label}
-                        {e.recurring === 1 && (
-                          <span
-                            className="ml-2 text-xs text-ink-soft"
-                            title="Dépense récurrente — reportée dans le prévisionnel"
-                            aria-label="récurrente"
-                          >
-                            ↻
-                          </span>
-                        )}
+                        {e.recurring === 1 && <RecurringMarker />}
                       </span>
                       <span className="num text-right text-ink">
                         {formatEuros(e.amount)}
