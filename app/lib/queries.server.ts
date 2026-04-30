@@ -271,7 +271,7 @@ export function getMonthState(monthId: number): MonthState {
   const m = getMonthById(monthId);
   if (!m) throw new Error("Month not found");
 
-  if (m.status === "open") {
+  if (m.status !== "closed") {
     const existing = db
       .select({ memberId: monthlyIncomes.memberId })
       .from(monthlyIncomes)
