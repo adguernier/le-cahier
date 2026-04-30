@@ -208,6 +208,9 @@ export default function MonthDetail() {
   const totalIndividual = individualExpenses.reduce((s, e) => s + e.amount, 0);
   const hasResults = results.proportional.length > 0 && totalCommon > 0;
   const hasIndividualTotals = results.individualTotals.some((t) => t.total > 0);
+  const forecastTotal = forecast
+    ? forecast.result.proportional.reduce((s, r) => s + r.total, 0)
+    : 0;
 
   return (
     <AppShell>
@@ -414,13 +417,7 @@ export default function MonthDetail() {
                 </ul>
                 <p className="mt-3 text-xs text-ink-soft">
                   Dépenses communes récurrentes: {forecast.recurringCount} · Total
-                  commun prévu:{" "}
-                  {formatEuros(
-                    forecast.result.proportional.reduce(
-                      (s, r) => s + r.total,
-                      0
-                    )
-                  )}
+                  commun prévu: {formatEuros(forecastTotal)}
                 </p>
               </div>
             )}
