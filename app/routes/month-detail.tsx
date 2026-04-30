@@ -24,15 +24,32 @@ import {
   updateExpense,
   updateIncome,
 } from "~/lib/queries.server";
+import type { MonthState } from "~/lib/queries.server";
 import { formatYyyyMm, monthLabel, nextMonth, parseYyyyMm } from "~/lib/month-utils";
 import { formatEuros } from "~/lib/money";
 import { expenseSchema, incomeSchema } from "~/lib/validation";
-import { calculate } from "~/lib/calc";
+import { calculate, type CalcInput, type CalcResult } from "~/lib/calc";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { AppShell } from "~/components/app-shell";
 import { MonthStatusBadge } from "~/components/month-status-badge";
+
+function toCalcInput(state: MonthState): CalcInput {
+  return {
+    members: state.incomes.map((i) => ({
+      id: i.memberId,
+      name: i.name,
+      income: i.amount,
+      costOfLiving: i.costOfLiving,
+    })),
+    expenses: state.expenses.map((e) => ({
+      id: e.id,
+      amount: e.amount,
+      memberIds: e.memberIds,
+    })),
+  };
+}
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   await requireAuth(request);
@@ -60,20 +77,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const membersList = listActiveMembers();
   const cats = listCategories();
 
-  const calcInput = {
-    members: state.incomes.map((i) => ({
-      id: i.memberId,
-      name: i.name,
-      income: i.amount,
-      costOfLiving: i.costOfLiving,
-    })),
-    expenses: state.expenses.map((e) => ({
-      id: e.id,
-      amount: e.amount,
-      memberIds: e.memberIds,
-    })),
-  };
-  const results = calculate(calcInput);
+  const results = calculate(toCalcInput(state));
 
   // Build the forecast preview data for open months.
   let forecast:
@@ -81,7 +85,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         year: number;
         month: number;
         source: "draft" | "computed";
-        result: ReturnType<typeof calculate>;
+        result: CalcResult;
         recurringCount: number;
       }
     | null = null;
@@ -89,28 +93,15 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (m.status === "open") {
     const next = nextMonth(year, month);
     const existingDraft = getMonth(next.year, next.month);
-    if (existingDraft) {
+    if (existingDraft && existingDraft.status === "draft") {
       const draftState = getMonthState(existingDraft.id);
-      const draftInput = {
-        members: draftState.incomes.map((i) => ({
-          id: i.memberId,
-          name: i.name,
-          income: i.amount,
-          costOfLiving: i.costOfLiving,
-        })),
-        expenses: draftState.expenses.map((e) => ({
-          id: e.id,
-          amount: e.amount,
-          memberIds: e.memberIds,
-        })),
-      };
       forecast = {
         year: next.year,
         month: next.month,
         source: "draft",
-        result: calculate(draftInput),
+        result: calculate(toCalcInput(draftState)),
         recurringCount: draftState.expenses.filter(
-          (e) => e.recurring === 1 && e.memberIds.length >= 2
+          (e) => e.memberIds.length >= 2
         ).length,
       };
     } else {
