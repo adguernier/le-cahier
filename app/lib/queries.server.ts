@@ -528,83 +528,85 @@ export function applyRollover(today: Date): void {
     return;
   }
 
-  const latest = all[all.length - 1];
+  db.transaction((tx) => {
+    const findMonth = (y: number, mo: number) =>
+      tx
+        .select()
+        .from(months)
+        .where(and(eq(months.year, y), eq(months.month, mo)))
+        .get();
 
-  // Walk from nextMonth(latest) up to target, creating closed intermediates.
-  let cursor = calendarNext(latest.year, latest.month);
-  while (
-    cursor.year < targetYear ||
-    (cursor.year === targetYear && cursor.month < targetMonth)
-  ) {
-    if (!getMonth(cursor.year, cursor.month)) {
+    const latest = all[all.length - 1];
+
+    let cursor = calendarNext(latest.year, latest.month);
+    while (
+      cursor.year < targetYear ||
+      (cursor.year === targetYear && cursor.month < targetMonth)
+    ) {
+      if (!findMonth(cursor.year, cursor.month)) {
+        const { year: prevYear, month: prevMo } = prevMonth(
+          cursor.year,
+          cursor.month
+        );
+        const prev = findMonth(prevYear, prevMo);
+        if (prev) {
+          const created = ensureDraft(prev.id);
+          tx.update(months)
+            .set({ status: "closed" })
+            .where(eq(months.id, created.id))
+            .run();
+        } else {
+          createMonth(cursor.year, cursor.month);
+          const row = findMonth(cursor.year, cursor.month)!;
+          tx.update(months)
+            .set({ status: "closed" })
+            .where(eq(months.id, row.id))
+            .run();
+        }
+      }
+      cursor = calendarNext(cursor.year, cursor.month);
+    }
+
+    const target = findMonth(targetYear, targetMonth);
+    if (!target) {
       const { year: prevYear, month: prevMo } = prevMonth(
-        cursor.year,
-        cursor.month
+        targetYear,
+        targetMonth
       );
-      const prev = getMonth(prevYear, prevMo);
+      const prev = findMonth(prevYear, prevMo);
       if (prev) {
         const created = ensureDraft(prev.id);
-        db.update(months)
-          .set({ status: "closed" })
+        tx.update(months)
+          .set({ status: "open" })
           .where(eq(months.id, created.id))
           .run();
       } else {
-        // Should not happen: latest exists → previous always exists for the
-        // first intermediate, and ensureDraft seeds the chain forward.
-        createMonth(cursor.year, cursor.month);
-        const row = getMonth(cursor.year, cursor.month)!;
-        db.update(months)
+        createMonth(targetYear, targetMonth);
+      }
+    } else if (target.status === "draft") {
+      tx.update(months)
+        .set({ status: "open" })
+        .where(eq(months.id, target.id))
+        .run();
+    }
+
+    const stale = tx
+      .select()
+      .from(months)
+      .where(inArray(months.status, ["open", "draft"]))
+      .all();
+    for (const m of stale) {
+      if (
+        m.year < targetYear ||
+        (m.year === targetYear && m.month < targetMonth)
+      ) {
+        tx.update(months)
           .set({ status: "closed" })
-          .where(eq(months.id, row.id))
+          .where(eq(months.id, m.id))
           .run();
       }
     }
-    cursor = calendarNext(cursor.year, cursor.month);
-  }
-
-  // Ensure target exists. If absent, create via ensureDraft from the previous
-  // month (which, after the walk, is guaranteed to exist). If present as
-  // draft, flip to open. If present as open/closed, leave alone.
-  const target = getMonth(targetYear, targetMonth);
-  if (!target) {
-    const { year: prevYear, month: prevMo } = prevMonth(
-      targetYear,
-      targetMonth
-    );
-    const prev = getMonth(prevYear, prevMo);
-    if (prev) {
-      const created = ensureDraft(prev.id);
-      db.update(months)
-        .set({ status: "open" })
-        .where(eq(months.id, created.id))
-        .run();
-    } else {
-      createMonth(targetYear, targetMonth);
-    }
-  } else if (target.status === "draft") {
-    db.update(months)
-      .set({ status: "open" })
-      .where(eq(months.id, target.id))
-      .run();
-  }
-
-  // Close any open or draft month strictly before target.
-  const stale = db
-    .select()
-    .from(months)
-    .where(inArray(months.status, ["open", "draft"]))
-    .all();
-  for (const m of stale) {
-    if (
-      m.year < targetYear ||
-      (m.year === targetYear && m.month < targetMonth)
-    ) {
-      db.update(months)
-        .set({ status: "closed" })
-        .where(eq(months.id, m.id))
-        .run();
-    }
-  }
+  });
 }
 
 export type ForecastInput = CalcInput;
