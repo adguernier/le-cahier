@@ -35,6 +35,7 @@ import {
 import { IncomeRow } from "~/components/month/income-row";
 import { AddExpenseForm } from "~/components/month/add-expense-form";
 import { ForecastPreview, type ForecastView } from "~/components/month/forecast-preview";
+import { MonthlySummary } from "~/components/month/monthly-summary";
 
 function toCalcInput(state: MonthState): CalcInput {
   return {
@@ -199,7 +200,6 @@ export default function MonthDetail() {
   const totalCommon = commonExpenses.reduce((s, e) => s + e.amount, 0);
   const totalIndividual = individualExpenses.reduce((s, e) => s + e.amount, 0);
   const hasResults = results.proportional.length > 0 && totalCommon > 0;
-  const hasIndividualTotals = results.individualTotals.some((t) => t.total > 0);
   const forecastTotal = forecast
     ? forecast.result.proportional.reduce((s, r) => s + r.total, 0)
     : 0;
@@ -341,23 +341,9 @@ export default function MonthDetail() {
               />
             </div>
           )}
-          {hasIndividualTotals && (
-            <div className="mt-10 border-t border-rule pt-6">
-              <p className="eyebrow mb-2">Dépenses personnelles</p>
-              <ul className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-soft">
-                {results.individualTotals
-                  .filter((t) => t.total > 0)
-                  .map((t) => (
-                    <li key={t.memberId} className="num">
-                      <span className="text-ink">{memberName(t.memberId)}</span>
-                      <span className="mx-2">—</span>
-                      <span className="text-ink">{formatEuros(t.total)}</span>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
         </section>
+
+        <MonthlySummary results={results} memberName={memberName} />
 
         {state.month.status === "open" && forecast && (
           <ForecastPreview
