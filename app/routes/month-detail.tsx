@@ -343,7 +343,11 @@ export default function MonthDetail() {
           )}
         </section>
 
-        <MonthlySummary results={results} memberName={memberName} />
+        <MonthlySummary
+          incomes={state.incomes}
+          results={results}
+          memberName={memberName}
+        />
 
         {state.month.status === "open" && forecast && (
           <ForecastPreview
