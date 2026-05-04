@@ -1,6 +1,4 @@
-import { useEffect, useRef } from "react";
 import {
-  Form,
   Link,
   useActionData,
   useFetcher,
@@ -23,15 +21,20 @@ import {
   updateIncome,
 } from "~/lib/queries.server";
 import type { MonthState } from "~/lib/queries.server";
-import { formatYyyyMm, monthLabel, nextMonth, parseYyyyMm } from "~/lib/month-utils";
+import { monthLabel, nextMonth, parseYyyyMm } from "~/lib/month-utils";
 import { formatEuros } from "~/lib/money";
 import { expenseSchema, incomeSchema } from "~/lib/validation";
-import { calculate, type CalcInput, type CalcResult } from "~/lib/calc";
+import { calculate, type CalcInput } from "~/lib/calc";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
 import { AppShell } from "~/components/app-shell";
 import { MonthStatusBadge } from "~/components/month-status-badge";
+import {
+  ExpenseSubList,
+  IndividualExpensesByMember,
+} from "~/components/month/expense-list";
+import { IncomeRow } from "~/components/month/income-row";
+import { AddExpenseForm } from "~/components/month/add-expense-form";
+import { ForecastPreview, type ForecastView } from "~/components/month/forecast-preview";
 
 function toCalcInput(state: MonthState): CalcInput {
   return {
@@ -55,11 +58,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   let m = getMonth(year, month);
 
-  // If the URL is the calendar-next month of the latest open month and no
-  // row exists yet, materialise the draft now.
   if (!m) {
     const openMonths = listMonths().filter((x) => x.status === "open");
-    const latestOpen = openMonths[0]; // listMonths is reverse chronological
+    const latestOpen = openMonths[0];
     if (latestOpen) {
       const adjacent = nextMonth(latestOpen.year, latestOpen.month);
       if (adjacent.year === year && adjacent.month === month) {
@@ -77,16 +78,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   const results = calculate(toCalcInput(state));
 
-  // Build the forecast preview data for open months.
-  let forecast:
-    | {
-        year: number;
-        month: number;
-        source: "draft" | "computed";
-        result: CalcResult;
-        recurringCount: number;
-      }
-    | null = null;
+  let forecast: ForecastView | null = null;
 
   if (m.status === "open") {
     const next = nextMonth(year, month);
@@ -215,7 +207,6 @@ export default function MonthDetail() {
   return (
     <AppShell>
       <div className="page space-y-14">
-        {/* --- Title --- */}
         <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 rise">
           <div>
             <p className="eyebrow">
@@ -239,7 +230,6 @@ export default function MonthDetail() {
           </p>
         )}
 
-        {/* --- Revenus --- */}
         <section className="rise rise-1" aria-labelledby="revenus-title">
           <div className="mb-5 flex items-baseline justify-between gap-4">
             <div>
@@ -277,7 +267,6 @@ export default function MonthDetail() {
           )}
         </section>
 
-        {/* --- Dépenses --- */}
         <section className="rise rise-2" aria-labelledby="depenses-title">
           <div className="mb-5 flex items-baseline justify-between gap-4">
             <div>
@@ -317,7 +306,6 @@ export default function MonthDetail() {
           )}
         </section>
 
-        {/* --- Résultats (hero) --- */}
         <section
           className="rise rise-3 rounded-md border border-rule-strong bg-paper-raised px-6 py-8 sm:px-10 sm:py-10"
           aria-labelledby="results-title"
@@ -371,60 +359,14 @@ export default function MonthDetail() {
           )}
         </section>
 
-        {/* --- Prévisionnel --- */}
         {state.month.status === "open" && forecast && (
-          <section className="rise rise-4" aria-labelledby="forecast-title">
-            <div className="mb-5 flex items-baseline justify-between gap-4">
-              <div>
-                <p className="eyebrow">Prévisionnel</p>
-                <h2
-                  id="forecast-title"
-                  className="mt-1 font-heading text-2xl text-ink"
-                >
-                  {monthLabel(forecast.year, forecast.month)}
-                </h2>
-              </div>
-              <Link
-                to={`/months/${formatYyyyMm(forecast.year, forecast.month)}`}
-                className="text-sm text-ink-soft hover:text-ink underline-offset-4 hover:underline"
-              >
-                Éditer →
-              </Link>
-            </div>
-
-            {forecast.recurringCount === 0 ? (
-              <p className="max-w-[56ch] text-sm text-ink-soft">
-                Marque tes dépenses régulières comme <em>récurrentes</em> pour
-                voir apparaître le prévisionnel du mois suivant.
-              </p>
-            ) : (
-              <div>
-                <p className="eyebrow mb-2">À verser au compte commun (prévu)</p>
-                <ul className="divide-y divide-rule border-t border-rule">
-                  {forecast.result.proportional.map((s) => (
-                    <li
-                      key={s.memberId}
-                      className="flex items-baseline justify-between gap-4 py-3"
-                    >
-                      <span className="text-ink">
-                        {memberName(s.memberId)}
-                      </span>
-                      <span className="num font-heading text-xl text-accent">
-                        {formatEuros(s.total)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-xs text-ink-soft">
-                  Dépenses communes prévues: {forecast.recurringCount} · Total
-                  commun prévu: {formatEuros(forecastTotal)}
-                </p>
-              </div>
-            )}
-          </section>
+          <ForecastPreview
+            forecast={forecast}
+            forecastTotal={forecastTotal}
+            memberName={memberName}
+          />
         )}
 
-        {/* --- Month actions --- */}
         <footer className="flex flex-wrap items-center justify-between gap-6 border-t border-rule pt-8 rise rise-4">
           <Link to="/months" className="text-sm text-ink-soft hover:text-ink underline-offset-4 hover:underline">
             ← Voir l’historique
@@ -445,231 +387,6 @@ function CloseMonthButton() {
       <Button type="submit" variant="ghost" disabled={isSubmitting}>
         {isSubmitting ? "Clôture…" : "Clôturer le mois"}
       </Button>
-    </fetcher.Form>
-  );
-}
-
-function DeleteExpenseButton({ id }: { id: number }) {
-  const fetcher = useFetcher<typeof action>();
-  const isSubmitting = fetcher.state !== "idle";
-  return (
-    <fetcher.Form method="post" className="inline-block">
-      <input type="hidden" name="intent" value="deleteExpense" />
-      <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant="destructive"
-        size="sm"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? "…" : "Supprimer"}
-      </Button>
-    </fetcher.Form>
-  );
-}
-
-function IncomeRow({
-  income,
-  isClosed,
-}: {
-  income: ReturnType<typeof useLoaderData<typeof loader>>["state"]["incomes"][number];
-  isClosed: boolean;
-}) {
-  const fetcher = useFetcher<typeof action>();
-  const isSubmitting = fetcher.state === "submitting";
-  const error =
-    fetcher.data && "error" in fetcher.data ? fetcher.data.error : null;
-  return (
-    <li className="py-4">
-      <fetcher.Form
-        method="post"
-        className="grid grid-cols-1 items-baseline gap-3 sm:grid-cols-[1fr_auto_auto_auto]"
-      >
-        <input type="hidden" name="intent" value="updateIncome" />
-        <input type="hidden" name="memberId" value={income.memberId} />
-        <p className="font-heading text-lg text-ink">{income.name}</p>
-        <IncomeField
-          name="amount"
-          label="Revenu"
-          defaultValue={income.amount}
-          disabled={isClosed}
-        />
-        <IncomeField
-          name="costOfLiving"
-          label="Reste à vivre"
-          defaultValue={income.costOfLiving}
-          disabled={isClosed}
-        />
-        <div className="pt-2 sm:pt-0">
-          {!isClosed && (
-            <Button
-              type="submit"
-              variant="outline"
-              size="sm"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "…" : "Enregistrer"}
-            </Button>
-          )}
-        </div>
-      </fetcher.Form>
-      {error && (
-        <p className="mt-2 text-sm text-danger" role="alert">
-          <span aria-hidden className="mr-2">—</span>
-          {error}
-        </p>
-      )}
-    </li>
-  );
-}
-
-function IncomeField({
-  name,
-  label,
-  defaultValue,
-  disabled,
-}: {
-  name: string;
-  label: string;
-  defaultValue: number;
-  disabled: boolean;
-}) {
-  const id = `${name}-${defaultValue}`;
-  return (
-    <div className="flex flex-col gap-1 sm:w-32">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        name={name}
-        defaultValue={(defaultValue / 100).toString()}
-        disabled={disabled}
-        inputMode="decimal"
-        className="num text-right"
-      />
-    </div>
-  );
-}
-
-function AddExpenseForm({
-  categories,
-  incomes,
-}: {
-  categories: ReturnType<typeof useLoaderData<typeof loader>>["categories"];
-  incomes: ReturnType<typeof useLoaderData<typeof loader>>["state"]["incomes"];
-}) {
-  const fetcher = useFetcher<typeof action>();
-  const formRef = useRef<HTMLFormElement>(null);
-  const isSubmitting = fetcher.state === "submitting";
-  const submittedOk =
-    fetcher.state === "idle" && fetcher.data && !("error" in fetcher.data);
-
-  useEffect(() => {
-    if (submittedOk) {
-      formRef.current?.reset();
-      formRef.current
-        ?.querySelector<HTMLInputElement>('input[name="label"]')
-        ?.focus();
-    }
-  }, [submittedOk]);
-
-  return (
-    <fetcher.Form
-      ref={formRef}
-      method="post"
-      className="mt-8 grid grid-cols-1 gap-5 border-t border-rule pt-6 sm:grid-cols-[10rem_1fr_9rem_auto]"
-      aria-labelledby="add-expense-title"
-    >
-      <p id="add-expense-title" className="eyebrow sm:col-span-4 -mb-2">
-        Ajouter une dépense
-      </p>
-      <input type="hidden" name="intent" value="addExpense" />
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="categoryId">Catégorie</Label>
-        <select
-          id="categoryId"
-          name="categoryId"
-          required
-          className="border-0 border-b border-rule bg-transparent py-1.5 text-base text-ink outline-none focus:border-accent focus-visible:outline-none"
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="expense-label">Libellé</Label>
-        <Input
-          id="expense-label"
-          name="label"
-          placeholder="Ex : électricité"
-          required
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="expense-amount">Montant (€)</Label>
-        <Input
-          id="expense-amount"
-          name="amount"
-          placeholder="0,00"
-          required
-          inputMode="decimal"
-          className="num"
-        />
-      </div>
-      <div className="flex items-end">
-        <Button
-          type="submit"
-          variant="primary"
-          className="w-full sm:w-auto"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Ajout…" : "Ajouter"}
-        </Button>
-      </div>
-      <fieldset className="sm:col-span-4">
-        <legend className="eyebrow mb-2">Concernés</legend>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {incomes.map((i) => (
-            <label
-              key={i.memberId}
-              className="inline-flex items-center gap-2 text-sm text-ink"
-            >
-              <input
-                type="checkbox"
-                name="memberIds"
-                value={i.memberId}
-                defaultChecked
-                className="size-3.5 accent-ink"
-              />
-              {i.name}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <div className="sm:col-span-4">
-        <label className="inline-flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            name="recurring"
-            value="on"
-            className="size-3.5 accent-ink"
-          />
-          <span>
-            Récurrente
-            <span className="ml-2 text-xs text-ink-soft">
-              (sera copiée dans le prévisionnel du mois suivant)
-            </span>
-          </span>
-        </label>
-      </div>
-      {fetcher.data && "error" in fetcher.data && (
-        <p className="sm:col-span-4 text-sm text-danger" role="alert">
-          <span aria-hidden className="mr-2">—</span>
-          {fetcher.data.error}
-        </p>
-      )}
     </fetcher.Form>
   );
 }
@@ -702,192 +419,6 @@ function ResultColumn({
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function RecurringMarker() {
-  return (
-    <span
-      className="ml-2 text-xs text-ink-soft"
-      title="Dépense récurrente — reportée dans le prévisionnel"
-      aria-label="récurrente"
-    >
-      ↻
-    </span>
-  );
-}
-
-type MonthExpense = ReturnType<
-  typeof useLoaderData<typeof loader>
->["state"]["expenses"][number];
-
-type MonthMember = ReturnType<
-  typeof useLoaderData<typeof loader>
->["members"][number];
-
-function ExpenseSubList({
-  title,
-  hint,
-  total,
-  expenses,
-  memberById,
-  isClosed,
-  emptyLabel,
-}: {
-  title: string;
-  hint: string;
-  total: number;
-  expenses: MonthExpense[];
-  memberById: Map<number, MonthMember>;
-  isClosed: boolean;
-  emptyLabel: string;
-}) {
-  return (
-    <div>
-      <div className="mb-3 flex items-baseline justify-between gap-4">
-        <div>
-          <h3 className="font-heading text-lg text-ink">{title}</h3>
-          <p className="text-xs text-ink-soft">{hint}</p>
-        </div>
-        <p className="num text-sm text-ink-soft">
-          <span className="eyebrow mr-2">sous-total</span>
-          <span className="text-ink">{formatEuros(total)}</span>
-        </p>
-      </div>
-      {expenses.length === 0 ? (
-        <p className="text-sm italic text-ink-soft">{emptyLabel}</p>
-      ) : (
-        <ul className="divide-y divide-rule border-t border-rule-strong">
-          {expenses.map((e) => (
-            <li
-              key={e.id}
-              className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-6 gap-y-1 py-3 sm:grid-cols-[10ch_1fr_auto_auto]"
-            >
-              <span className="eyebrow">{e.categoryName}</span>
-              <span className="text-ink">
-                {e.label}
-                {e.recurring === 1 && <RecurringMarker />}
-              </span>
-              <span className="num text-right text-ink">
-                {formatEuros(e.amount)}
-              </span>
-              <div className="col-span-3 flex flex-wrap items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
-                <span className="text-xs text-ink-soft sm:mr-4">
-                  {e.memberIds
-                    .map((id) => memberById.get(id)?.name)
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-                {!isClosed && <DeleteExpenseButton id={e.id} />}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function IndividualExpensesByMember({
-  total,
-  expenses,
-  members,
-  isClosed,
-}: {
-  total: number;
-  expenses: MonthExpense[];
-  members: MonthMember[];
-  isClosed: boolean;
-}) {
-  const byMember = new Map<number, MonthExpense[]>();
-  for (const e of expenses) {
-    const id = e.memberIds[0];
-    if (id == null) continue;
-    const list = byMember.get(id) ?? [];
-    list.push(e);
-    byMember.set(id, list);
-  }
-
-  const groups = members
-    .map((m) => ({ member: m, items: byMember.get(m.id) ?? [] }))
-    .filter((g) => g.items.length > 0);
-
-  return (
-    <div>
-      <div className="mb-3 flex items-baseline justify-between gap-4">
-        <div>
-          <h3 className="font-heading text-lg text-ink">
-            Dépenses individuelles
-          </h3>
-          <p className="text-xs text-ink-soft">
-            à la charge d’une seule personne
-          </p>
-        </div>
-        <p className="num text-sm text-ink-soft">
-          <span className="eyebrow mr-2">sous-total</span>
-          <span className="text-ink">{formatEuros(total)}</span>
-        </p>
-      </div>
-      {groups.length === 0 ? (
-        <p className="text-sm italic text-ink-soft">
-          Aucune dépense individuelle ce mois.
-        </p>
-      ) : (
-        <div className="space-y-6 border-t border-rule-strong">
-          {groups.map((g) => {
-            const memberTotal = g.items.reduce((s, e) => s + e.amount, 0);
-            return (
-              <div key={g.member.id} className="pt-4">
-                <div className="mb-2 flex items-baseline justify-between gap-4">
-                  <h4 className="font-heading text-base text-ink">
-                    {g.member.name}
-                  </h4>
-                  <p className="num text-sm text-ink">
-                    {formatEuros(memberTotal)}
-                  </p>
-                </div>
-                <ul className="divide-y divide-rule">
-                  {g.items.map((e) => (
-                    <li
-                      key={e.id}
-                      className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-6 gap-y-1 py-3 sm:grid-cols-[10ch_1fr_auto_auto]"
-                    >
-                      <span className="eyebrow">{e.categoryName}</span>
-                      <span className="text-ink">
-                        {e.label}
-                        {e.recurring === 1 && <RecurringMarker />}
-                      </span>
-                      <span className="num text-right text-ink">
-                        {formatEuros(e.amount)}
-                      </span>
-                      <div className="col-span-3 flex justify-end sm:col-span-1">
-                        {!isClosed && (
-                          <Form method="post" className="inline-block">
-                            <input
-                              type="hidden"
-                              name="intent"
-                              value="deleteExpense"
-                            />
-                            <input type="hidden" name="id" value={e.id} />
-                            <Button
-                              type="submit"
-                              variant="destructive"
-                              size="sm"
-                            >
-                              Supprimer
-                            </Button>
-                          </Form>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

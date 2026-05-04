@@ -609,9 +609,7 @@ export function applyRollover(today: Date): void {
   });
 }
 
-export type ForecastInput = CalcInput;
-
-export function getForecastInput(currentMonthId: number): ForecastInput {
+export function getForecastInput(currentMonthId: number): CalcInput {
   const incomes = db
     .select({
       memberId: monthlyIncomes.memberId,
