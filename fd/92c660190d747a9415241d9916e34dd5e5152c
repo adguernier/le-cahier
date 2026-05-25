@@ -1,0 +1,40 @@
+CLAUDE.md
+  a8e571e097095ded 7-32,42-45,59-62,79-82,100-104,108
+  h_c2d6c943659315 1-6,33-41,46-58,63-78,83-99,105-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.1",
+  "base_commit_sha": "fd92c660190d747a9415241d9916e34dd5e5152c",
+  "prompts": {
+    "a8e571e097095ded": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "519b8b2f-e10f-406b-903b-e32d66d1b82a",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier",
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 149,
+      "overriden_lines": 0
+    },
+    "f6a28e2d77dd271b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "956aaf06-58fc-47c4-a7ef-8ec876d010be",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "adguernier <adguernier@gmail.com>",
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  },
+  "humans": {
+    "h_c2d6c943659315": {
+      "author": "adguernier"
+    }
+  }
+}
